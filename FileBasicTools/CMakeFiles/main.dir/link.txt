@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -Wl,--dependency-file=CMakeFiles/main.dir/link.d CMakeFiles/main.dir/main.cpp.o -o main

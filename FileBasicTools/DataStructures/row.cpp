@@ -24,3 +24,13 @@ template <typename T>
 void Row<T>::Clear() {
     data_.clear();
 }
+
+template <typename T>
+std::vector<T> Row<T>::GetData() {
+    return data_;
+}
+
+template <typename T>
+std::vector<T> Row<T>::ExtractData() {
+    return std::move(data_);
+}

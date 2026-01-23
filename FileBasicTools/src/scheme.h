@@ -1,16 +1,21 @@
-#pragma "once"
+#pragma once
 #include <string>
 #include <vector>
-#include "datum.h"
-#include "file_tools.h"
+#include "CSVReader.h"
 
-std::shared_ptr<Datum> DatumConvertor(const std::string& type);
+enum class ColumnType : int8_t {
+    Int64 = 1,
+    String = 2,
+    Unknow = 3,
+};
 
-class SchemeReader {
+ColumnType DatumConvertor(const std::string& type);
+
+class Scheme {
 public:
     struct Node {
         std::string name;
-        std::shared_ptr<Datum> data;
+        ColumnType data;
     };
     void ReadScheme(const std::string& filePath);
     std::vector<Node> GetScheme();
