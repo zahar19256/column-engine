@@ -23,6 +23,7 @@ public:
     const std::string& GetName(size_t index) const;
     ColumnType GetType(size_t index) const;
     const Node& GetInfo(size_t index) const;
+    size_t Size() const;
 private:
     std::vector<Node> columns_;
 };

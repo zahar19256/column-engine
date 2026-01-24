@@ -25,3 +25,18 @@ void Batch::ChunkToBatch(const std::vector<Row<std::string>>& chunk) {
         }
     }
 }
+
+std::shared_ptr<Column> Batch::GetColumn(size_t index) const {
+    if (index >= columns_.size()) {
+        throw std::runtime_error("Index of column is out of batch range");
+    }
+    return columns_[index];
+}
+
+size_t Batch::Size() const {
+    return columns_.size();
+}
+
+bool Batch::Empty() const {
+    return columns_.empty();
+}

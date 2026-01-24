@@ -43,3 +43,7 @@ const Node& Scheme::GetInfo(size_t index) const {
     }
     return columns_[index];
 }
+
+size_t Scheme::Size() const {
+    return columns_.size();
+}

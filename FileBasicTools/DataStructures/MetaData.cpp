@@ -1,31 +1,30 @@
 #include "MetaData.h"
 
-void MetaData::AddBytes(std::vector<uint8_t> bytes) {
-    if (bytes.empty()) {
-        return;
-    }
-    if (data_.empty()) {
-        data_.swap(bytes);
-        return;
-    }
-    data_.insert(data_.end(), bytes.begin(), bytes.end());
+void MetaData::AddOffset(size_t offset) {
+    offsets_.push_back(offset);
 }
 
-void MetaData::AddBytes(const uint8_t* ptr, size_t size) {
-    if (!ptr || size == 0) {
-        return;
-    }
-    data_.insert(data_.end(), ptr, ptr + size);
+void MetaData::AddRows(size_t count) {
+    rows_.push_back(count);
 }
 
-const std::vector<uint8_t>& MetaData::GetData() const {
-    return data_;
+void MetaData::AddCodec(size_t codec) {
+    codec_.push_back(codec);
+}
+
+const std::vector<size_t>& MetaData::GetOffests() const {
+    return offsets_;
+}
+
+const std::vector<size_t>& MetaData::GetRows() const {
+    return rows_;
 }
 
 size_t MetaData::Size() const {
-    return data_.size();
+    return offsets_.size();
 }
 
 void MetaData::Clear() {
-    data_.clear();
+    offsets_.clear();
+    codec_.clear();
 }
