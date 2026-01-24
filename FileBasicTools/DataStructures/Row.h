@@ -18,6 +18,7 @@ public:
     void Clear();
     std::vector<T> ExtractData();
     std::vector<T> GetData();
+    const T& operator[](size_t index) const;
 private:
     std::vector<T> data_;
 };

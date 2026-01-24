@@ -42,7 +42,7 @@ std::vector<std::vector<std::string>> CSVReader::ReadFullTable(char delimiter) {
     Row<std::string> row;
     while (true) {
         size_t bytes = 0;
-        ReadRow(row , bytes);
+        ReadRowCSV(row , bytes);
         if (bytes == 0 || row.Empty()) {
             break;
         }
@@ -60,7 +60,7 @@ std::vector<Row<std::string>> CSVReader::ReadChunk(char delimiter) {
     Row<std::string> row;
     size_t current_size = 0;
     while (current_size < bucket_) {
-        ReadRow(row , current_size);
+        ReadRowCSV(row , current_size);
         if (row.Empty()) {
             break;
         }

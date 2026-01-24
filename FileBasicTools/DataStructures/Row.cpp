@@ -34,3 +34,8 @@ template <typename T>
 std::vector<T> Row<T>::ExtractData() {
     return std::move(data_);
 }
+
+template <typename T>
+const T& Row<T>::operator[](size_t index) const {
+    return data_[index];
+}

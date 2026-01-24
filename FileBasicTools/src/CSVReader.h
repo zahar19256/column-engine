@@ -18,6 +18,8 @@ public:
 
     std::vector<Row<std::string>> ReadChunk(char delimiter = ',');
 
+    bool ReadBatch(char delimiter = ',');
+
 private:
     const std::string& filePath_;
     size_t bucket_;

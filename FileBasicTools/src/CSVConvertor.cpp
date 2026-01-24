@@ -13,5 +13,9 @@ void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
 }
 
 void CSVConvertor::GetBatches(const std::string& CSVFilePath) {
-    
+    CSVReader scan(CSVFilePath);
+    while (true) {
+        std::vector <Row<std::string>> chunk = scan.ReadChunk();
+        batches_.push_back(Batch(chunk , scheme_));
+    }
 }

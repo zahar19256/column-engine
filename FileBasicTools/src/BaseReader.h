@@ -9,7 +9,7 @@
 class BaseReader {
 public:
     void ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimetr = ',');
-    void ReadRowBytes(Row<uint8_t>& data , size_t& bytes , char delimetr = ',');
+    void ReadRowBytes(Row<uint8_t>& data , size_t& bytes , char delimetr = ','); // TODO Implement ReadRowBytes
 protected:
     std::ifstream stream_;
 };
