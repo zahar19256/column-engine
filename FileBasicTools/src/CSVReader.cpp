@@ -1,5 +1,4 @@
 #include "CSVReader.h"
-#include "row.h"
 #include <cstdint>
 #include <error.h>
 #include <stdexcept>

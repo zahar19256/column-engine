@@ -1,6 +1,6 @@
 #include "BaseReader.h"
 
-void BaseReader::ReadRow(Row<std::string>& data , size_t& bytes , char delimiter) {
+void BaseReader::ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimiter) {
     std::string current_field = "";
     enum class CURSOR_STATE {
         IN_QOUTE,
