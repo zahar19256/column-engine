@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <error.h>
 #include <stdexcept>
-#include <filesystem>
 #include <string>
 
 CSVReader::CSVReader(const std::string& filePath , ssize_t bucket_size) : filePath_(filePath) , bucket_(bucket_size) {
@@ -67,16 +66,4 @@ std::vector<Row<std::string>> CSVReader::ReadChunk(char delimiter) {
         table.push_back(std::move(row));
     }
     return table;
-}
-
-bool FileExists(const std::string& filePath) {
-    return std::filesystem::exists(filePath);
-}
-
-void WriteBytesInFile(const std::string& destPath, const std::vector<uint8_t>& data) {
-    if (!FileExists(destPath)) {
-        throw std::invalid_argument("Wrong destination path, can't find file!");
-    }
-    std::ofstream fout(destPath, std::ios::binary | std::ios::app);
-    fout.write(reinterpret_cast<const char*>(data.data()) , data.size());
 }

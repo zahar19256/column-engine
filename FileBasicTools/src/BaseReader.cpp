@@ -1,4 +1,5 @@
 #include "BaseReader.h"
+#include <filesystem>
 
 void BaseReader::ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimiter) {
     std::string current_field = "";
@@ -52,4 +53,12 @@ void BaseReader::ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimi
     if (!current_field.empty()) {
         data.Add(current_field);
     }
+}
+
+void BaseReader::ReadBytes(std::vector<uint8_t>& data , size_t size) {
+    stream_.read(reinterpret_cast<char*>(data.data()) , size);
+}
+
+bool FileExists(const std::string& filePath) {
+    return std::filesystem::exists(filePath);
 }

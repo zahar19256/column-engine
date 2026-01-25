@@ -6,7 +6,7 @@
 
 class CSVConvertor {
 public:
-    bool GetChunk(CSVReader& scan_ , const std::string& CSVFilePath);
+    bool GetChunk(CSVReader& scan_);
     void GetScheme(const std::string& SchemeFilePath);
     void MakeBelZFormat(const std::string& CSVFilePath , const std::string& SchemeFilePath);
 private:

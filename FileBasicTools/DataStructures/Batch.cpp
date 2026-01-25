@@ -26,17 +26,30 @@ void Batch::ChunkToBatch(const std::vector<Row<std::string>>& chunk) {
     }
 }
 
+void Batch::AddColumn(std::shared_ptr<Column> column) {
+    data_.push_back(column);
+}
+
+void Batch::SetScheme(const Scheme& scheme) {
+    scheme_ = scheme;
+}
+
 std::shared_ptr<Column> Batch::GetColumn(size_t index) const {
-    if (index >= columns_.size()) {
+    if (index >= data_.size()) {
         throw std::runtime_error("Index of column is out of batch range");
     }
-    return columns_[index];
+    return data_[index];
 }
 
 size_t Batch::Size() const {
-    return columns_.size();
+    return data_.size();
 }
 
 bool Batch::Empty() const {
-    return columns_.empty();
+    return data_.empty();
+}
+
+void Batch::Clear() {
+    scheme_.Clear();
+    data_.clear();
 }

@@ -25,7 +25,3 @@ private:
     size_t bucket_;
     bool initial_chunk_ = true;
 };
-
-bool FileExists(const std::string& filePath);
-
-void WriteBytesInFile(const std::string& destPath, const std::vector<uint8_t>& data);

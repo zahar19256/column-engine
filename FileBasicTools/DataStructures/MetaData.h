@@ -7,10 +7,14 @@ public:
     void AddOffset(size_t offset);
     void AddCodec(size_t codec);
     void AddRows(size_t count);
-    const std::vector<size_t>& GetOffests() const;
+    const std::vector<size_t>& GetOffsets() const;
     const std::vector<size_t>& GetRows() const;
+    const std::vector<size_t>& GetCodec() const; // TODO Impliment it
     size_t Size() const;
     void Clear();
+    size_t GetOffset(size_t index) const;
+    size_t GetRow(size_t index) const;
+    size_t GetCodec(size_t index) const; // TODO Impliment it
 private:
     std::vector <size_t> offsets_;
     std::vector <size_t> codec_;

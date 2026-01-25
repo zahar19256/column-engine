@@ -11,15 +11,15 @@ ColumnType DatumConvertor(const std::string& type) {
     return ColumnType::Unknown;
 }
 
-void Scheme::Push_Back(const Node& value) {
+void Scheme::Push_Back(const SchemeNode& value) {
     columns_.push_back(value);
 }
 
-void Scheme::Push_Back(Node&& value) {
+void Scheme::Push_Back(SchemeNode&& value) {
     columns_.push_back(std::move(value));
 }
 
-const std::vector<Node>& Scheme::GetScheme() const {
+const std::vector<SchemeNode>& Scheme::GetScheme() const {
     return columns_;
 }
 
@@ -37,7 +37,7 @@ ColumnType Scheme::GetType(size_t index) const {
     return columns_[index].type;
 }
 
-const Node& Scheme::GetInfo(size_t index) const {
+const SchemeNode& Scheme::GetInfo(size_t index) const {
     if (index >= columns_.size()) {
         throw std::runtime_error("Index of GetInfo is out of range!");
     }
@@ -46,4 +46,8 @@ const Node& Scheme::GetInfo(size_t index) const {
 
 size_t Scheme::Size() const {
     return columns_.size();
+}
+
+void Scheme::Clear() {
+    columns_.clear();
 }

@@ -19,6 +19,12 @@ public:
     void AppendFromString(const std::string& data) override {
         data_.push_back(data);
     }
+    void Push_Back(std::string&& value) {
+        data_.push_back(std::move(value));
+    }
+    void Push_Back(std::string& value) {
+        data_.push_back(value);
+    }
     size_t Size() const noexcept override {
         return data_.size();
     }
@@ -33,6 +39,9 @@ public:
     }
     void AppendFromString(const std::string& s) override {
         data_.push_back(std::stoll(s));
+    }
+    void Push_Back(int64_t value) {
+        data_.push_back(value);
     }
     const int64_t* Data() const noexcept {
         return data_.data();

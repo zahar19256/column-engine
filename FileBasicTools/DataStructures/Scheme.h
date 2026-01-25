@@ -8,7 +8,7 @@ enum class ColumnType : int8_t {
     Unknown = 3,
 };
 
-struct Node {
+struct SchemeNode {
     std::string name;
     ColumnType type;
 };
@@ -17,13 +17,14 @@ ColumnType DatumConvertor(const std::string& type);
 
 class Scheme {
 public:
-    void Push_Back(const Node& value);
-    void Push_Back(Node&& value);
-    const std::vector<Node>& GetScheme() const;
+    void Push_Back(const SchemeNode& value);
+    void Push_Back(SchemeNode&& value);
+    const std::vector<SchemeNode>& GetScheme() const;
     const std::string& GetName(size_t index) const;
     ColumnType GetType(size_t index) const;
-    const Node& GetInfo(size_t index) const;
+    const SchemeNode& GetInfo(size_t index) const;
     size_t Size() const;
+    void Clear();
 private:
-    std::vector<Node> columns_;
+    std::vector<SchemeNode> columns_;
 };
