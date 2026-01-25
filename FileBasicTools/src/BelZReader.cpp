@@ -20,7 +20,7 @@ bool BelZReader::Empty() const {
 }
 
 std::shared_ptr<Column> BelZReader::ReadInt64Column(size_t size) {
-    std::shared_ptr<Int64Column> result;
+    auto result = std::make_shared<Int64Column>();
     // TODO Можно ускорить данное место, если читать сразу одним блоком данных
     for (size_t i = 0; i < size; ++i) {
         int64_t value;
@@ -31,7 +31,7 @@ std::shared_ptr<Column> BelZReader::ReadInt64Column(size_t size) {
 }
 
 std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
-    std::shared_ptr<StringColumn> result;
+    auto result = std::make_shared<StringColumn>();
     for (size_t i = 0; i < size; ++i) {
         size_t len;
         stream_.read(reinterpret_cast<char*>(&len) , sizeof(len));
@@ -70,7 +70,7 @@ void BelZReader::ReadMetaData() {
         stream_.read(reinterpret_cast<char*>(&node) , sizeof(SchemeNode));
         scheme_.Push_Back(node);
     }
-    stream_.read(reinterpret_cast<char*>(batches_left_) , sizeof(batches_left_));
+    stream_.read(reinterpret_cast<char*>(&batches_left_) , sizeof(batches_left_));
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t offset;
         stream_.read(reinterpret_cast<char*>(&offset) , sizeof(offset));

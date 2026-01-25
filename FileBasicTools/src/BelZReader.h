@@ -15,7 +15,6 @@ private:
     std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type);
     std::shared_ptr<Column> ReadInt64Column(size_t size);
     std::shared_ptr<Column> ReadStringColumn(size_t size);
-    std::ifstream stream_;
     MetaData meta_;
     Scheme scheme_;
     size_t batches_left_ = 0;
