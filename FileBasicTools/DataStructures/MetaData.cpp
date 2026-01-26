@@ -43,3 +43,7 @@ void MetaData::Clear() {
     offsets_.clear();
     codec_.clear();
 }
+
+const Scheme& MetaData::GetScheme() const {
+    return scheme_;
+}

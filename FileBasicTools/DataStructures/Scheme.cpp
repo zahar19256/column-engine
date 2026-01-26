@@ -19,8 +19,8 @@ void Scheme::Push_Back(SchemeNode&& value) {
     columns_.push_back(std::move(value));
 }
 
-const std::vector<SchemeNode>& Scheme::GetScheme() const {
-    return columns_;
+const SchemeNode* Scheme::GetData() const {
+    return columns_.data();
 }
 
 const std::string& Scheme::GetName(size_t index) const {

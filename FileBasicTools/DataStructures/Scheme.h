@@ -19,7 +19,7 @@ class Scheme {
 public:
     void Push_Back(const SchemeNode& value);
     void Push_Back(SchemeNode&& value);
-    const std::vector<SchemeNode>& GetScheme() const;
+    const SchemeNode* GetData() const;
     const std::string& GetName(size_t index) const;
     ColumnType GetType(size_t index) const;
     const SchemeNode& GetInfo(size_t index) const;
