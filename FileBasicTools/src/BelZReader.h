@@ -3,7 +3,6 @@
 #include "Batch.h"
 #include "MetaData.h"
 #include "Scheme.h"
-#include <fstream>
 
 class BelZReader : public BaseReader{
 public:
