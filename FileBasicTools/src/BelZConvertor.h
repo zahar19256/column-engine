@@ -1,6 +1,5 @@
 #pragma once
 #include "BelZReader.h"
-
 class BelZConvertor {
 public:
     bool GetBatch(BelZReader& scan_);

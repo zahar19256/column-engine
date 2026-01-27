@@ -14,6 +14,7 @@ public:
     std::shared_ptr<Column> GetColumn(size_t index) const;
     void AddColumn(std::shared_ptr<Column> column);
     void SetScheme(const Scheme& scheme);
+    ColumnType GetType(size_t index) const;
     size_t Size() const;
     bool Empty() const;
     void Clear();

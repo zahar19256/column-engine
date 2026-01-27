@@ -47,3 +47,7 @@ void MetaData::Clear() {
 const Scheme& MetaData::GetScheme() const {
     return scheme_;
 }
+
+size_t MetaData::CountOfBatches() const {
+    return offsets_.size();
+}

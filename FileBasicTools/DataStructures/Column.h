@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <stdexcept>
 #include <vector>
 #include <string>
 
@@ -25,6 +26,12 @@ public:
     void Push_Back(std::string& value) {
         data_.push_back(value);
     }
+    std::string& operator[](size_t index) {
+        if (index >= data_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range");
+        }
+        return data_[index];
+    }
     size_t Size() const noexcept override {
         return data_.size();
     }
@@ -45,6 +52,12 @@ public:
     }
     const int64_t* Data() const noexcept {
         return data_.data();
+    }
+    int64_t operator[](size_t index) {
+        if (index >= data_.size()) {
+            throw std::runtime_error("Index is out of Int64Column range");
+        }
+        return data_[index];
     }
     size_t Size() const noexcept override {
         return data_.size();

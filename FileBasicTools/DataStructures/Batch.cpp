@@ -53,3 +53,7 @@ void Batch::Clear() {
     scheme_.Clear();
     data_.clear();
 }
+
+ColumnType Batch::GetType(size_t index) const {
+    return scheme_.GetType(index);
+}
