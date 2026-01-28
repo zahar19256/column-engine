@@ -1,10 +1,10 @@
 #pragma once
-#include "BaseReader.h"
 #include "Batch.h"
 #include "MetaData.h"
 #include "Scheme.h"
+#include <fstream>
 
-class BelZReader : public BaseReader{
+class BelZReader {
 public:
     BelZReader(const std::string& filePath);
     void ReadBatch(Batch& batch);
@@ -18,4 +18,5 @@ private:
     Scheme scheme_;
     size_t batches_left_ = 0;
     size_t index_of_batch = 0;
+    std::ifstream stream_;
 };

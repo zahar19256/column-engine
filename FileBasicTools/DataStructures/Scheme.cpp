@@ -2,10 +2,10 @@
 #include <stdexcept>
 
 ColumnType DatumConvertor(const std::string& type) {
-    if (type == "String") {
+    if (type == "string") {
         return  ColumnType::String;
     }
-    if (type == "Int64") {
+    if (type == "int64") {
         return  ColumnType::Int64;
     }
     return ColumnType::Unknown;

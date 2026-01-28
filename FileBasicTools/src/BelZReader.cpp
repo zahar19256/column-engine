@@ -5,9 +5,6 @@
 #include <string>
 
 BelZReader::BelZReader(const std::string& filePath) {
-    if (!FileExists(filePath)) {
-        throw std::invalid_argument("File not found: " + filePath);
-    }
     stream_ = std::ifstream(filePath , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading: " + filePath);

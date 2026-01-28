@@ -11,14 +11,33 @@ public:
     Row& operator=(Row&& other) = default;
     ~Row() = default;
 
-    void Add(const T& value);
-    void Add(T&& value);
-    size_t Size() const;
-    bool Empty() const;
-    void Clear();
-    std::vector<T> ExtractData();
-    std::vector<T> GetData();
-    const T& operator[](size_t index) const;
+    void Add(const T& value) {
+        data_.push_back(value);
+    }
+    void Add(T&& value) {
+        data_.push_back(std::move(value));
+    }
+    size_t Size() const {
+        return data_.size();
+    }
+    bool Empty() const {
+        return data_.empty();
+    }
+    void Clear() {
+        data_.clear();
+    }
+    std::vector<T> ExtractData() {
+        return std::move(data_);
+    }
+    std::vector<T> GetData() {
+        return data_;
+    }
+    const T& operator[](size_t index) const {
+        return data_[index];
+    }
+    T& operator[](size_t index) {
+        return data_[index];
+    }
 private:
     std::vector<T> data_;
 };

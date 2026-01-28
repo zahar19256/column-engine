@@ -26,7 +26,7 @@ public:
     void Push_Back(std::string& value) {
         data_.push_back(value);
     }
-    std::string& operator[](size_t index) {
+    const std::string& operator[](size_t index) {
         if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }

@@ -42,6 +42,8 @@ size_t MetaData::Size() const {
 void MetaData::Clear() {
     offsets_.clear();
     codec_.clear();
+    rows_.clear();
+    scheme_.Clear();
 }
 
 const Scheme& MetaData::GetScheme() const {

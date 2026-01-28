@@ -9,7 +9,7 @@ void Batch::ChunkToBatch(const std::vector<Row<std::string>>& chunk) {
     if (chunk.empty()) {
         return;
     }
-    for (size_t column = 0; column < chunk[0].Size(); ++column) {
+    for (size_t column = 0; column < scheme_.Size(); ++column) {
         std::shared_ptr<Column> storage;
         if (scheme_.GetType(column) == ColumnType::Int64) {
             storage = std::make_shared<Int64Column>();
@@ -23,6 +23,7 @@ void Batch::ChunkToBatch(const std::vector<Row<std::string>>& chunk) {
         for (size_t row = 0; row < chunk.size(); ++row) {
             storage->AppendFromString(chunk[row][column]);
         }
+        AddColumn(storage);
     }
 }
 
