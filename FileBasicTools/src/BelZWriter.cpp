@@ -1,4 +1,5 @@
 #include "BelZWriter.h"
+#include "Scheme.h"
 #include <stdexcept>
 #include <filesystem>
 #include <iostream>
@@ -46,12 +47,23 @@ void BelZWriter::WriteString(const std::string& data) {
     fout_.write(data.data(), len);
 }
 
+void BelZWriter::WriteScheme(const Scheme& scheme_) {
+    for (size_t index = 0; index < scheme_.Size(); ++index) {
+        std::string current_name = scheme_.GetName(index);
+        size_t len = current_name.size();
+        fout_.write(reinterpret_cast<const char*>(&len), sizeof(len));
+        fout_.write(current_name.c_str(), len);
+        uint8_t type = static_cast<uint8_t>(scheme_.GetType(index));
+        fout_.write(reinterpret_cast<const char*>(&type), sizeof(type));
+    }
+}
+
 void BelZWriter::WriteMeta(const MetaData& meta_) {
     uint64_t meta_start_offset = static_cast<uint64_t>(fout_.tellp());
     size_t batches_count = meta_.Size();
     size_t col_count = meta_.GetScheme().Size();
     fout_.write(reinterpret_cast<const char*>(&col_count) , sizeof(col_count));
-    fout_.write(reinterpret_cast<const char*>((meta_.GetScheme()).GetData()) , col_count * sizeof(SchemeNode));
+    WriteScheme(meta_.GetScheme());
     fout_.write(reinterpret_cast<const char*>(&batches_count) , sizeof(batches_count));
     fout_.write(reinterpret_cast<const char*>(meta_.GetOffsets().data()) , meta_.Size() * sizeof(size_t));
     fout_.write(reinterpret_cast<const char*>(meta_.GetRows().data()) , meta_.Size() * sizeof(size_t));
