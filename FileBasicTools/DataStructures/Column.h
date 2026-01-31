@@ -23,7 +23,7 @@ public:
     void Push_Back(std::string&& value) {
         data_.push_back(std::move(value));
     }
-    void Push_Back(std::string& value) {
+    void Push_Back(const std::string& value) {
         data_.push_back(value);
     }
     const std::string& operator[](size_t index) {
@@ -44,16 +44,19 @@ public:
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
+    void Resize(size_t n) {
+        data_.resize(n);
+    }
     void AppendFromString(const std::string& s) override {
         data_.push_back(std::stoll(s));
     }
     void Push_Back(int64_t value) {
         data_.push_back(value);
     }
-    const int64_t* Data() const noexcept {
+    int64_t* Data() noexcept {
         return data_.data();
     }
-    int64_t operator[](size_t index) {
+    int64_t operator[](size_t index) const {
         if (index >= data_.size()) {
             throw std::runtime_error("Index is out of Int64Column range");
         }

@@ -1,10 +1,9 @@
 #include "CSVReader.h"
 #include <cstdint>
-#include <error.h>
 #include <stdexcept>
 #include <string>
 
-CSVReader::CSVReader(const std::string& filePath , ssize_t bucket_size) : filePath_(filePath) , bucket_(bucket_size) {
+CSVReader::CSVReader(const std::string& filePath , size_t bucket_size) : filePath_(filePath) , bucket_size_(bucket_size) {
     stream_ = std::ifstream(filePath_ , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading: " + filePath);
@@ -96,25 +95,8 @@ std::vector<std::vector<std::string>> CSVReader::ReadFullTable(char delimiter) {
         if (bytes == 0 || row.Empty()) {
             break;
         }
-        table.push_back(row.ExtractData());
-    }
-    return table;
-}
-
-std::vector<Row<std::string>> CSVReader::ReadChunk(char delimiter) {
-    if (initial_chunk_) {
-        BOMHelper();
-        initial_chunk_ = false;
-    }
-    std::vector<Row<std::string>> table;
-    Row<std::string> row;
-    size_t current_size = 0;
-    while (current_size < bucket_) {
-        ReadRowCSV(row , current_size , delimiter);
-        if (row.Empty()) {
-            break;
-        }
-        table.push_back(std::move(row));
+        table.push_back(row.ExtractData());// TODO изменить данное место так чтобы не надо было делать лишний Clear возможно стоит отказаться от Row.h вообще как от лишней абстракции
+        row.Clear();
     }
     return table;
 }

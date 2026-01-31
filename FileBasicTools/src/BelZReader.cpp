@@ -11,7 +11,7 @@ BelZReader::BelZReader(const std::string& filePath) {
     }
     stream_ = std::ifstream(filePath , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
-        throw std::runtime_error("Failed to open CSV for reading: " + filePath);
+        throw std::runtime_error("Failed to open CSV for reading in BelZReader constructor: " + filePath);
     }
     ReadMetaData();
 }
@@ -22,13 +22,10 @@ bool BelZReader::Empty() const {
 
 std::shared_ptr<Column> BelZReader::ReadInt64Column(size_t size) {
     auto result = std::make_shared<Int64Column>();
-    std::vector<int64_t> buffer(size);
     if (size > 0) {
-        stream_.read(reinterpret_cast<char*>(buffer.data()), size * sizeof(int64_t));
+        result->Resize(size);
+        stream_.read(reinterpret_cast<char*>(result->Data()), size * sizeof(int64_t));
         if (!stream_) throw std::runtime_error("Failed to read Int64 block");
-    }
-    for (int64_t val : buffer) {
-        result->Push_Back(val);
     }
     return result;
 }

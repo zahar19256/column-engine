@@ -40,7 +40,8 @@ protected:
         
         // Читаем батчами, чтобы не забивать память, если файл огромный
         while (true) {
-            auto chunk = reader.ReadChunk();
+            std::vector<Row<std::string>> chunk;
+            reader.ReadChunk(chunk);
             if (chunk.empty()) break;
 
             for (const auto& row : chunk) {

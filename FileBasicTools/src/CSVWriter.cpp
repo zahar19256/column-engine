@@ -1,5 +1,6 @@
 #include "CSVWriter.h"
 #include "Column.h"
+#include "Scheme.h"
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -28,13 +29,12 @@ void CSVWriter::WriteString(const std::string& data) {
         }
     }
     if (!needs_quotes) {
-        fout_ << data;
+        fout_.write(data.data() , data.size());
         return;
     }
     std::string output;
     output.reserve(data.size() + 2);
     output.push_back('"');
-    
     for (char c : data) {
         if (c == '"') {
             output += "\"\"";
@@ -43,42 +43,33 @@ void CSVWriter::WriteString(const std::string& data) {
         }
     }
     output.push_back('"');
-    fout_ << output;
+    fout_.write(output.data() , output.size());
 }
 
 void CSVWriter::WriteDelimetr(char delimetr) {
-    fout_ << delimetr;
-}
-
-template <typename T>
-void CSVWriter::WriteData(const T& data , ColumnType type) {
-    if (type == ColumnType::Int64) {
-        WriteInt64(data);
-        return;
-    }
-    if (type == ColumnType::String) {
-        WriteString(data);
-        return;
-    }
-    throw std::runtime_error("Try to write unknown type"+ std::to_string(static_cast<uint8_t>(type)));
+    fout_.write(&delimetr , sizeof(delimetr));
 }
 
 void CSVWriter::WriteBatch(const Batch& batch) {
+    if (batch.Empty()) {
+        throw std::runtime_error("Try to write empty batch!");
+    }
     size_t columns = batch.Size();
     size_t rows = batch.GetColumn(0)->Size();
     for (size_t row = 0; row < rows; ++row) {
         for (size_t column = 0; column < columns; ++column) {
             std::shared_ptr<Column> storage = batch.GetColumn(column);
             // TODO решить проблему и придумать как использовать WriteData пока что мы не можем от базового класса взять оператор квадратные скобки
-            if (Is<Int64Column>(storage)) {
+            // TODO надо бы убрать As так как это долго
+            if (batch.GetType(column) == ColumnType::Int64) {
                 WriteInt64((*As<Int64Column>(storage))[row]);
                 if (column + 1 < columns) {
                     WriteDelimetr();
                 }
                 continue;
             }
-            if (Is<StringColumn>(storage)) {
-                WriteString((*As<StringColumn>(storage))[row]);
+            if (batch.GetType(column) == ColumnType::String) {
+                WriteString((*As<StringColumn>(storage))[row]); // TODO переписать на конкатенацию всех строк вывод одной большой и потом запись всех размеров
                 if (column + 1 < columns) {
                     WriteDelimetr();
                 }

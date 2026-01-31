@@ -32,18 +32,13 @@ void BelZWriter::WriteData(const std::string& data , ColumnType type) {
 }
 
 void BelZWriter::WriteInt64(const std::string& data) {
-    try {
-        int64_t val = std::stoll(data);
-        fout_.write(reinterpret_cast<const char*>(&val) , sizeof(val));
-    } catch (...) {
-        int64_t val = 0; 
-        fout_.write(reinterpret_cast<const char*>(&val) , sizeof(val));
-    }
+    int64_t val = std::stoll(data);
+    fout_.write(reinterpret_cast<char*>(&val) , sizeof(val));
 }
 
 void BelZWriter::WriteString(const std::string& data) {
     size_t len = data.size();
-    fout_.write(reinterpret_cast<const char*>(&len) , sizeof(len));
+    fout_.write(reinterpret_cast<char*>(&len) , sizeof(len));
     fout_.write(data.data(), len);
 }
 
@@ -51,21 +46,9 @@ void BelZWriter::WriteScheme(const Scheme& scheme_) {
     for (size_t index = 0; index < scheme_.Size(); ++index) {
         std::string current_name = scheme_.GetName(index);
         size_t len = current_name.size();
-        fout_.write(reinterpret_cast<const char*>(&len), sizeof(len));
-        fout_.write(current_name.c_str(), len);
+        fout_.write(reinterpret_cast<char*>(&len), sizeof(len));
+        fout_.write(current_name.data(), len);
         uint8_t type = static_cast<uint8_t>(scheme_.GetType(index));
-        fout_.write(reinterpret_cast<const char*>(&type), sizeof(type));
+        fout_.write(reinterpret_cast<char*>(&type), sizeof(type));
     }
-}
-
-void BelZWriter::WriteMeta(const MetaData& meta_) {
-    uint64_t meta_start_offset = static_cast<uint64_t>(fout_.tellp());
-    size_t batches_count = meta_.Size();
-    size_t col_count = meta_.GetScheme().Size();
-    fout_.write(reinterpret_cast<const char*>(&col_count) , sizeof(col_count));
-    WriteScheme(meta_.GetScheme());
-    fout_.write(reinterpret_cast<const char*>(&batches_count) , sizeof(batches_count));
-    fout_.write(reinterpret_cast<const char*>(meta_.GetOffsets().data()) , meta_.Size() * sizeof(size_t));
-    fout_.write(reinterpret_cast<const char*>(meta_.GetRows().data()) , meta_.Size() * sizeof(size_t));
-    fout_.write(reinterpret_cast<const char*>(&meta_start_offset) , sizeof(meta_start_offset));
 }

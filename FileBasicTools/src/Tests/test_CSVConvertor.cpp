@@ -152,7 +152,7 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
     // 2. Генерируем большой CSV
     // Нам нужно пробить барьер в 4096 байт.
     // Пусть одна строка будет ~50 байт. 1000 строк = 50 КБ.
-    size_t total_rows_expected = 1000;
+    size_t total_rows_expected = 100000;
     
     {
         std::ofstream out(csvPath);

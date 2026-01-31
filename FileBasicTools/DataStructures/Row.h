@@ -29,7 +29,7 @@ public:
     std::vector<T> ExtractData() {
         return std::move(data_);
     }
-    std::vector<T> GetData() {
+    const std::vector<T> GetData() const {
         return data_;
     }
     const T& operator[](size_t index) const {

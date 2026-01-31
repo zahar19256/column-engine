@@ -86,15 +86,18 @@ TEST(CSVReaderTest, ReadChunk_SmallBucket) {
     size_t small_bucket_size = 1; 
     CSVReader reader(tempFile.GetPath(), small_bucket_size);
 
-    std::vector<Row<std::string>> chunk1 = reader.ReadChunk();
+    std::vector<Row<std::string>> chunk1;
+    reader.ReadChunk(chunk1);
     ASSERT_FALSE(chunk1.empty());
     EXPECT_EQ(chunk1[0][0], "1");
     
-    std::vector<Row<std::string>> chunk2 = reader.ReadChunk();
+    std::vector<Row<std::string>> chunk2;
+    reader.ReadChunk(chunk2);
     ASSERT_FALSE(chunk2.empty());
     EXPECT_EQ(chunk2[0][0], "3");
     
-    std::vector<Row<std::string>> chunk3 = reader.ReadChunk();
+    std::vector<Row<std::string>> chunk3;
+    reader.ReadChunk(chunk3);
     ASSERT_FALSE(chunk3.empty());
     EXPECT_EQ(chunk3[0][0], "5");
 }
@@ -139,7 +142,8 @@ TEST(CSVReaderTest, LargeFile_MultipleBuckets) {
     CSVReader reader(tempFile.GetPath(), 4096);
     int rows_read = 0;
     while (true) {
-        auto chunk = reader.ReadChunk();
+        std::vector<Row<std::string>> chunk;
+        reader.ReadChunk(chunk);
         if (chunk.empty()) {
             break;
         }

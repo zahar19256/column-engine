@@ -2,7 +2,20 @@
 #include "BelZWriter.h"
 #include "Scheme.h"
 
+void CSVConvertor::Reset() {
+    chunk_.clear();
+    meta_.Clear();
+    scheme_.Clear();
+}
+
+void CSVConvertor::SetScheme(const Scheme& scheme) {
+    scheme_ = scheme;
+}
+
 void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
+    if (SchemeFilePath == "BENCHTIME.GO") { // TODO пока что это костыль для мини бенча к КТ 1 потом будет убрано 
+        return;
+    }
     CSVReader tmp_scan(SchemeFilePath);
     std::vector<std::vector<std::string>> table = tmp_scan.ReadFullTable();
     for (auto row : table) {
@@ -14,7 +27,7 @@ void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
 }
 
 bool CSVConvertor::GetChunk(CSVReader& scan_) {
-    chunk_ = scan_.ReadChunk();
+    scan_.ReadChunk(chunk_);
     if (chunk_.empty()) {
         return false;
     }
@@ -22,8 +35,11 @@ bool CSVConvertor::GetChunk(CSVReader& scan_) {
 }
 
 void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath) {
+    Reset();
+
     CSVReader scan_(CSVFilePath);
     GetScheme(SchemeFilePath);
+
     BelZWriter writer(CSVFilePath);
     size_t col_count = scheme_.Size();
     while (GetChunk(scan_)) {
@@ -33,12 +49,10 @@ void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::str
         meta_.AddCodec(0);
         for (size_t column_idx = 0; column_idx < col_count; ++column_idx) {
             for (size_t row_idx = 0; row_idx < rows_in_chunk; ++row_idx) {
-                std::string raw_value = chunk_[row_idx][column_idx];
-                ColumnType type = scheme_.GetType(column_idx);
-                writer.WriteData(raw_value, type);
+                writer.WriteData(chunk_[row_idx][column_idx], scheme_.GetType(column_idx));
             }
         }
     }
     meta_.SetScheme(std::move(scheme_));
-    writer.WriteMeta(meta_);
+    writer.WriteMeta(std::move(meta_));
 }

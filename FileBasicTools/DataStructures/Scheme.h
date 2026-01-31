@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <cstdint>
 
 enum class ColumnType : int8_t {
     Int64 = 1,
