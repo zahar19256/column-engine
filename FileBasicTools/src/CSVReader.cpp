@@ -1,7 +1,9 @@
 #include "CSVReader.h"
+#include "Row.h"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <iostream>
 
 CSVReader::CSVReader(const std::string& filePath , size_t bucket_size) : filePath_(filePath) , bucket_size_(bucket_size) {
     stream_ = std::ifstream(filePath_ , std::ios::binary);
@@ -22,59 +24,89 @@ void CSVReader::BOMHelper() {
     }
 }
 
-void CSVReader::ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimiter) {
-    std::string current_field = "";
-    enum class CURSOR_STATE {
-        IN_QOUTE,
-        NOT_IN_QOUTE,
-    };
-    CURSOR_STATE state = CURSOR_STATE::NOT_IN_QOUTE;
-    char current;
-    while (stream_.get(current)) {
-        ++bytes;
-        if (state == CURSOR_STATE::IN_QOUTE) {
-            if (current == '"') {
-                if (stream_.peek() == '"') {
-                    current_field += current;
-                    stream_.get();
-                    ++bytes;
-                } else {
-                    state = CURSOR_STATE::NOT_IN_QOUTE;
+void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
+    CURSOR_STATE state = CURSOR_STATE::NOT_IN_QUOTE;
+    size_t current_len = data.data_.size();
+    std::string field;
+    while (true) {
+        if (!std::getline(stream_, field)) {
+            break;
+        }
+        bool has_delim = !stream_.eof();
+        bytes += field.size();
+        if (has_delim) {
+            ++bytes;
+        }
+        const char* buf = field.data();
+        size_t n = field.size();
+        size_t offset = 0;
+        for (size_t i = 0; i < n; ++i) {
+            char cur = buf[i];
+            if (state == CURSOR_STATE::IN_QUOTE) {
+                if (cur == '"') {
+                    if (i + 1 < n && buf[i + 1] == '"') {
+                        if (i > offset) {
+                            data.data_.append(buf + offset, i - offset);
+                            current_len += i - offset;
+                        }
+                        data.data_.push_back('"');
+                        ++current_len;
+                        ++i;
+                        offset = i + 1;
+                    } else {
+                        if (i > offset) {
+                            data.data_.append(buf + offset, i - offset);
+                            current_len += i - offset;
+                        }
+                        offset = i + 1;
+                        state = CURSOR_STATE::NOT_IN_QUOTE;
+                    }
                 }
             } else {
-                current_field += current;
+                if (cur == delimiter) {
+                    if (i > offset) {
+                        data.data_.append(buf + offset, i - offset);
+                        current_len += i - offset;
+                    }
+                    data.PushOffset(current_len);
+                    offset = i + 1;
+                } else {
+                    if (cur == '"') {
+                        if (i > offset) {
+                            data.data_.append(buf + offset, i - offset);
+                            current_len += i - offset;
+                        }
+                        offset = i + 1;
+                        state = CURSOR_STATE::IN_QUOTE;
+                    }
+                }
+            }
+        }
+        if (n > offset) {
+            data.data_.append(buf + offset, n - offset);
+            current_len += n - offset;
+        }
+        if (state == CURSOR_STATE::IN_QUOTE) {
+            if (has_delim) {
+                data.data_.push_back('\n');
+                ++current_len;
             }
             continue;
-        }
-        if (current == delimiter) {
-            data.Add(current_field);
-            current_field.clear();
-            continue;
-        }
-        if (current == '\r') {
-            if (stream_.peek() == '\n') {
-                stream_.get();
-                data.Add(current_field);
-                current_field.clear();
-                ++bytes;
+        } else {
+            if (has_delim) {
+                data.PushOffset(current_len);
+                break;
+            } else {
                 break;
             }
         }
-        if (current == '\n') {
-            data.Add(current_field);
-            current_field.clear();
-            break;
-        }
-        if (current == '"') {
-            state = CURSOR_STATE::IN_QOUTE;
-            continue;
-        }
-        current_field += current;
     }
-    if (!current_field.empty()) {
-        data.Add(current_field);
+    size_t prev = data.LastOffset();
+    if (current_len != prev) {
+        data.PushOffset(current_len);
     }
 }
+
 
 std::vector<uint8_t> CSVReader::ReadFileData() {
     std::vector<uint8_t> data;
@@ -85,18 +117,17 @@ std::vector<uint8_t> CSVReader::ReadFileData() {
     return data;
 }
 
-std::vector<std::vector<std::string>> CSVReader::ReadFullTable(char delimiter) {
+std::vector<StringBacket> CSVReader::ReadFullTable(char delimiter) {
     BOMHelper();
-    std::vector<std::vector<std::string>> table;
-    Row<std::string> row;
+    StringBacket row;
+    std::vector<StringBacket> table;
     while (true) {
         size_t bytes = 0;
         ReadRowCSV(row , bytes , delimiter);
-        if (bytes == 0 || row.Empty()) {
+        if (bytes == 0) {
             break;
         }
-        table.push_back(row.ExtractData());// TODO изменить данное место так чтобы не надо было делать лишний Clear возможно стоит отказаться от Row.h вообще как от лишней абстракции
-        row.Clear();
+        table.push_back(std::move(row));
     }
     return table;
 }

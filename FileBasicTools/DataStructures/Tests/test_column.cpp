@@ -147,8 +147,10 @@ TEST(ColumnUtilsTest, Polymorphism) {
     columns.push_back(std::make_shared<StringColumn>());
     
     // Вызываем виртуальный AppendFromString
-    columns[0]->AppendFromString("100");
-    columns[1]->AppendFromString("text");
+    std::string s1 = "100";
+    std::string s2 = "text";
+    columns[0]->AppendFromString(s1.data() , 3);
+    columns[1]->AppendFromString(s2.data() , 4);
     
     // Проверяем результат через каст (так как оператор [] не виртуальный)
     EXPECT_EQ((*As<Int64Column>(columns[0]))[0], 100);

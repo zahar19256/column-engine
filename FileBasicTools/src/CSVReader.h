@@ -5,7 +5,7 @@
 #include <fstream>
 #include "Row.h"
 
-const size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 4;
+static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 4;
 
 class CSVReader {
 public:
@@ -15,30 +15,55 @@ public:
 
     std::vector<uint8_t> ReadFileData();
 
-    void ReadRowCSV(Row<std::string>& data , size_t& bytes , char delimetr = ',');
+    void ReadRowCSV(StringBacket& data , size_t& bytes , char delimetr = ',');
 
-    std::vector<std::vector<std::string>> ReadFullTable(char delimiter = ',');
+    std::vector<StringBacket> ReadFullTable(char delimiter = ',');
 
-    template <typename OutputVector>
-    void ReadChunk(OutputVector&& table , char delimiter = ',') {
-        table.clear();
+    void ReadChunk(StringBacket& data , char delimiter = ',') {
+        data.Clear();
         if (initial_chunk_) {
             BOMHelper();
             initial_chunk_ = false;
         }
-        Row<std::string> row;
         size_t current_size = 0;
+        size_t old_size = 0;
         while (current_size < bucket_size_) {
-            ReadRowCSV(row , current_size , delimiter);
-            if (row.Empty()) {
+            ReadRowCSV(data , current_size , delimiter);
+            if (old_size == current_size) {
                 break;
             }
-            table.push_back(std::move(row));
-            row.Clear();
+            old_size = current_size;
+            data.EndRow();
+        }
+        // std::cerr << data.GetRows() << ' ' << data.Size() << std::endl;
+    }
+
+    void ReadChunk(std::vector<StringBacket>& data , char delimiter = ',') {
+        data.clear();
+        if (initial_chunk_) {
+            BOMHelper();
+            initial_chunk_ = false;
+        }
+        data.reserve(bucket_size_ * 2);
+        size_t current_size = 0;
+        size_t old_size = 0;
+        StringBacket Row;
+        while (current_size < bucket_size_) {
+            ReadRowCSV(Row , current_size , delimiter);
+            if (old_size == current_size) {
+                break;
+            }
+            old_size = current_size;
+            data.push_back(std::move(Row));
+            Row.Clear();
         }
     }
 
 private:
+    enum class CURSOR_STATE {
+        IN_QUOTE,
+        NOT_IN_QUOTE,
+    };
     const std::string& filePath_;
     size_t bucket_size_;
     bool initial_chunk_ = true;

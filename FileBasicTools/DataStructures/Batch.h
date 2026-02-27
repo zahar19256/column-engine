@@ -8,7 +8,7 @@
 class Batch {
 public:
     Batch() = default;
-    Batch(const std::vector<Row<std::string>>& chunk , const Scheme& scheme) : scheme_(scheme) {
+    Batch(const StringBacket& chunk , const Scheme& scheme) : scheme_(scheme) {
         ChunkToBatch(chunk);
     }
     void AddColumn(std::shared_ptr<Column> column);
@@ -19,7 +19,7 @@ public:
     bool Empty() const;
     void Clear();
 private:
-    void ChunkToBatch(const std::vector<Row<std::string>>& chunk);
+    void ChunkToBatch(const StringBacket& chunk);
     Scheme scheme_;
     std::vector <std::shared_ptr<Column>> data_;
 };

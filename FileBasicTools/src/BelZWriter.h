@@ -6,11 +6,19 @@
 class BelZWriter {
 public:
     BelZWriter(const std::string& CSVFilePath);
+    void EnsureCapacity(size_t add_size);
     uint64_t GetOffSet();
-    void WriteData(const std::string& data , ColumnType type);
-    void WriteInt64(const std::string& data);
-    void WriteString(const std::string& data);
+    void WriteData(const char* data , size_t size , ColumnType type);
+    void WriteInt64(const char* data , size_t size);
+    void WriteString(const char* data , size_t size);
     void WriteScheme(const Scheme& scheme);
+    void Append(const char* data , size_t size , ColumnType type);
+    void AppendInt64(const char* data , size_t size);
+    void AppendString(const char* data , size_t size);
+    void Flush() {
+        fout_.write(buf_.data() , offset_);
+        offset_ = 0;
+    }
 
     template <typename T>
     void WriteMeta(T&& meta_) {
@@ -26,4 +34,6 @@ public:
     }
 private:
     std::ofstream fout_;
+    std::string buf_;
+    size_t offset_ = 0;
 };

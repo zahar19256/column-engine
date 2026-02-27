@@ -49,10 +49,10 @@ protected:
             << "Row count mismatch between original and converted CSV";
 
         for (size_t i = 0; i < table1.size(); ++i) {
-            ASSERT_EQ(table1[i].size(), table2[i].size()) 
+            ASSERT_EQ(table1[i].Size(), table2[i].Size()) 
                 << "Column count mismatch at row " << i;
             
-            for (size_t j = 0; j < table1[i].size(); ++j) {
+            for (size_t j = 0; j < table1[i].Size(); ++j) {
                 EXPECT_EQ(table1[i][j], table2[i][j]) 
                     << "Value mismatch at row " << i << ", col " << j;
             }

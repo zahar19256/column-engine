@@ -1,13 +1,15 @@
 #pragma once
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <memory.h>
 
 class Column {
 public:
     virtual void Reserve(size_t n) = 0;
-    virtual void AppendFromString(const std::string&) = 0;
+    virtual void AppendFromString(const char* start , size_t size) = 0;
     virtual size_t Size() const = 0;
     virtual ~Column() = default;
 };
@@ -17,7 +19,15 @@ public:
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
-    void AppendFromString(const std::string& data) override {
+    void AppendFromString(const char* start , size_t size) override {
+        data_.push_back("");
+        data_.back().resize(size);
+        memcpy(data_.back().data() , start , size);
+    }
+    void AppendFromString(std::string val) {
+        data_.push_back(val);
+    }
+    void AppendFromRow(const char* data , size_t size) {
         data_.push_back(data);
     }
     void Push_Back(std::string&& value) {
@@ -47,8 +57,14 @@ public:
     void Resize(size_t n) {
         data_.resize(n);
     }
-    void AppendFromString(const std::string& s) override {
-        data_.push_back(std::stoll(s));
+    void AppendFromString(const char* start , size_t size) override {
+        std::string now;
+        now.resize(size);
+        memcpy(now.data(), start, size);
+        data_.push_back(std::stoi(now));
+    }
+    void AppendFromString(std::string val) {
+        data_.push_back(std::stoi(val));
     }
     void Push_Back(int64_t value) {
         data_.push_back(value);

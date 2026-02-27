@@ -37,7 +37,7 @@ TEST(CSVReaderTest, ReadSingleRow) {
 
     CSVReader reader(tempFile.GetPath());
 
-    Row<std::string> row;
+    StringBacket row;
     size_t bytesRead = 0;
     
     reader.ReadRowCSV(row, bytesRead);
@@ -57,9 +57,7 @@ TEST(CSVReaderTest, ReadFullTable) {
 
     CSVReader reader(tempFile.GetPath());
     auto table = reader.ReadFullTable();
-
     ASSERT_EQ(table.size(), 3);
-
     EXPECT_EQ(table[0][0], "name");
     EXPECT_EQ(table[1][0], "Alice");
     EXPECT_EQ(table[2][1], "30");
@@ -86,17 +84,17 @@ TEST(CSVReaderTest, ReadChunk_SmallBucket) {
     size_t small_bucket_size = 1; 
     CSVReader reader(tempFile.GetPath(), small_bucket_size);
 
-    std::vector<Row<std::string>> chunk1;
+    std::vector<StringBacket> chunk1;
     reader.ReadChunk(chunk1);
     ASSERT_FALSE(chunk1.empty());
     EXPECT_EQ(chunk1[0][0], "1");
     
-    std::vector<Row<std::string>> chunk2;
+    std::vector<StringBacket> chunk2;
     reader.ReadChunk(chunk2);
     ASSERT_FALSE(chunk2.empty());
     EXPECT_EQ(chunk2[0][0], "3");
     
-    std::vector<Row<std::string>> chunk3;
+    std::vector<StringBacket> chunk3;
     reader.ReadChunk(chunk3);
     ASSERT_FALSE(chunk3.empty());
     EXPECT_EQ(chunk3[0][0], "5");
@@ -110,7 +108,7 @@ TEST(CSVReaderTest, BOM_Handling) {
     
     reader.BOMHelper(); 
     
-    Row<std::string> row;
+    StringBacket row;
     size_t bytes = 0;
     reader.ReadRowCSV(row, bytes);
 
@@ -142,7 +140,7 @@ TEST(CSVReaderTest, LargeFile_MultipleBuckets) {
     CSVReader reader(tempFile.GetPath(), 4096);
     int rows_read = 0;
     while (true) {
-        std::vector<Row<std::string>> chunk;
+        std::vector<StringBacket> chunk;
         reader.ReadChunk(chunk);
         if (chunk.empty()) {
             break;

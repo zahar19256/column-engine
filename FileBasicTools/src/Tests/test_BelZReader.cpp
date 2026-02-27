@@ -43,13 +43,13 @@ protected:
             // 2. Пишем КОЛОНКУ 1 (id) целиком для этого батча
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 int64_t val = (b * rows_per_batch) + r; // id = 0, 1, 2...
-                writer.WriteData(std::to_string(val), ColumnType::Int64);
+                writer.WriteData(std::to_string(val).data() , std::to_string(val).size(), ColumnType::Int64);
             }
 
             // 3. Пишем КОЛОНКУ 2 (name) целиком для этого батча
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 std::string val = "name_" + std::to_string((b * rows_per_batch) + r);
-                writer.WriteData(val, ColumnType::String);
+                writer.WriteData(val.data(), val.size(), ColumnType::String);
             }
         }
 

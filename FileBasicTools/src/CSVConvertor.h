@@ -1,4 +1,5 @@
 #pragma once
+#include "Row.h"
 #include "Scheme.h"
 #include "MetaData.h"
 #include "CSVReader.h"
@@ -13,6 +14,6 @@ public:
     void MakeBelZFormat(const std::string& CSVFilePath , const std::string& SchemeFilePath);
 private:
     Scheme scheme_;
-    std::vector <Row<std::string>> chunk_;
+    StringBacket chunk_;
     MetaData meta_;
 };
