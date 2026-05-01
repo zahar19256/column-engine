@@ -14,6 +14,6 @@ public:
     void MakeBelZFormat(const std::string& CSVFilePath , const std::string& SchemeFilePath);
 private:
     Scheme scheme_;
-    StringBacket chunk_;
+    Batch chunk_;
     MetaData meta_;
 };

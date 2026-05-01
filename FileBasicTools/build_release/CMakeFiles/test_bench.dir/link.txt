@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_bench.dir/link.d CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o -o test_bench  libdata_structures.a libfile_tools.a /usr/lib/libgtest_main.so.1.17.0 libdata_structures.a /usr/lib/libgtest.so.1.17.0

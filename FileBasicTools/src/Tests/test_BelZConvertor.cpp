@@ -74,13 +74,11 @@ TEST_F(BelZConvertorTest, RoundTrip_Small) {
     // 2. CSV -> BelZ
     CSVConvertor toBelZ;
     toBelZ.MakeBelZFormat(csvInput, schemePath);
-    
-    ASSERT_TRUE(fs::exists(belzPath)) << "Intermediate .belZ file not created";
 
+    ASSERT_TRUE(fs::exists(belzPath)) << "Intermediate .belZ file not created";
     // 3. BelZ -> CSV (Тестируемый класс)
     BelZConvertor toCSV;
     toCSV.MakeCSV(belzPath);
-
     ASSERT_TRUE(fs::exists(csvOutput)) 
         << "Final CSV file not created. Expected: " << csvOutput;
 

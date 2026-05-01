@@ -3,20 +3,23 @@
 #include "MetaData.h"
 #include "Scheme.h"
 #include <fstream>
+#include <vector>
 
 class BelZReader {
 public:
     BelZReader(const std::string& filePath);
     void ReadBatch(Batch& batch);
-    std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type);
+    std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type , ssize_t need_offset = -1);
     std::shared_ptr<Column> ReadInt64Column(size_t size);
     std::shared_ptr<Column> ReadStringColumn(size_t size);
     void ReadMetaData();
     bool Empty() const;
 private:
+    static constexpr size_t kStreamBufferSize = 8 * 1024 * 1024;
     MetaData meta_;
     Scheme scheme_;
     size_t batches_left_ = 0;
     size_t index_of_batch = 0;
+    std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
     std::ifstream stream_;
 };

@@ -1,11 +1,14 @@
 #pragma once
+#include <cstddef>
 #include <string>
 #include <vector>
 #include <cstdint>
 #include <fstream>
 #include "Row.h"
+#include "Batch.h"
 
-static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 4;
+static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 8;
+static size_t STANDART_ROWS_COUNT = 128;
 
 class CSVReader {
 public:
@@ -19,21 +22,23 @@ public:
 
     std::vector<StringBacket> ReadFullTable(char delimiter = ',');
 
-    void ReadChunk(StringBacket& data , char delimiter = ',') {
-        data.Clear();
+    void ReadChunk(Batch& data , char delimiter = ',') {
+        data_.Clear();
         if (initial_chunk_) {
             BOMHelper();
             initial_chunk_ = false;
         }
         size_t current_size = 0;
         size_t old_size = 0;
-        while (current_size < bucket_size_) {
-            ReadRowCSV(data , current_size , delimiter);
+        for (size_t num = 0; num < STANDART_ROWS_COUNT; ++num) {
+            ReadRowCSV(data_ , current_size , delimiter);
             if (old_size == current_size) {
                 break;
             }
+            data_.EndRow();
+            data.AddRowFromCSV(data_);
             old_size = current_size;
-            data.EndRow();
+            data_.Clear();
         }
         // std::cerr << data.GetRows() << ' ' << data.Size() << std::endl;
     }
@@ -60,6 +65,7 @@ public:
     }
 
 private:
+    static constexpr size_t kStreamBufferSize = 8 * 1024 * 1024;
     enum class CURSOR_STATE {
         IN_QUOTE,
         NOT_IN_QUOTE,
@@ -67,5 +73,7 @@ private:
     const std::string& filePath_;
     size_t bucket_size_;
     bool initial_chunk_ = true;
+    StringBacket data_;
+    std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
     std::ifstream stream_;
 };

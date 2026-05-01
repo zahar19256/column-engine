@@ -9,7 +9,8 @@ BelZReader::BelZReader(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
         throw std::runtime_error("File not found: " + filePath);
     }
-    stream_ = std::ifstream(filePath , std::ios::binary);
+    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
+    stream_.open(filePath , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading in BelZReader constructor: " + filePath);
     }
@@ -48,7 +49,10 @@ std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
     return result;
 }
 
-std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type) {
+std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , ssize_t need_offset) {
+    if (need_offset != -1) {
+        stream_.seekg(need_offset);  
+    }
     if (type == ColumnType::Int64) {
         return ReadInt64Column(size);
     }
@@ -82,12 +86,17 @@ void BelZReader::ReadMetaData() {
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t offset;
         stream_.read(reinterpret_cast<char*>(&offset) , sizeof(offset));
-        meta_.AddOffset(offset);
+        meta_.AddBatchOffset(offset);
     }
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t rows;
         stream_.read(reinterpret_cast<char*>(&rows) , sizeof(rows));
         meta_.AddRows(rows);
+    }
+    for (size_t i = 0; i < batches_left_ * col_count; ++i) {
+        size_t offset;
+        stream_.read(reinterpret_cast<char*>(&offset) , sizeof(offset));
+        meta_.AddColumnOffset(offset);
     }
 }
 
@@ -96,7 +105,7 @@ void BelZReader::ReadBatch(Batch& batch) {
         throw std::runtime_error("Try to read Batch after end of file!");
     }
     batch.Clear(); 
-    size_t current_offset = meta_.GetOffset(index_of_batch);
+    size_t current_offset = meta_.GetBatchOffset(index_of_batch);
     stream_.seekg(current_offset, std::ios::beg);
     batch.SetScheme(scheme_); 
     size_t rows_count = meta_.GetRow(index_of_batch);

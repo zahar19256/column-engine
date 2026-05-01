@@ -1,5 +1,6 @@
 #include "CSVConvertor.h"
 #include "BelZWriter.h"
+#include "CSVReader.h"
 #include "Row.h"
 #include "Scheme.h"
 #include <cstring>
@@ -31,9 +32,9 @@ void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
 }
 
 bool CSVConvertor::GetChunk(CSVReader& scan_) {
-    chunk_.Clear();
+    chunk_.Reset();
     scan_.ReadChunk(chunk_);
-    if (chunk_.Empty()) {
+    if (chunk_.GetRows() == 0) {
         return false;
     }
     return true;
@@ -45,20 +46,19 @@ void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::str
     GetScheme(SchemeFilePath);
     BelZWriter writer(CSVFilePath);
     size_t col_count = scheme_.Size();
+    chunk_.Init(scheme_);
+    meta_.SetScheme(std::move(scheme_));
     while (GetChunk(scan_)) {
         size_t rows_in_chunk = chunk_.GetRows();
         //std::cerr << "!!!" << rows_in_chunk << ' ' << col_count << std::endl;
-        meta_.AddOffset(writer.GetOffSet());
+        meta_.AddBatchOffset(writer.GetOffSet());
         meta_.AddRows(rows_in_chunk);
         meta_.AddCodec(0);
         for (size_t column_idx = 0; column_idx < col_count; ++column_idx) {
-            for (size_t row_idx = 0; row_idx < rows_in_chunk; ++row_idx) {
-                //std::cerr << row_idx << ' ' << column_idx << std::endl;
-                writer.Append(chunk_.GetString(row_idx , column_idx) , chunk_.GetSize(row_idx, column_idx) , scheme_.GetType(column_idx));
-            }
-            writer.Flush();
+            meta_.AddColumnOffset(writer.GetOffSet());
+            writer.AppendColumn(chunk_.GetColumn(column_idx) , chunk_.GetType(column_idx));
         }
+        writer.Flush();
     }
-    meta_.SetScheme(std::move(scheme_));
     writer.WriteMeta(std::move(meta_));
 }

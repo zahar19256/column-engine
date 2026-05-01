@@ -132,9 +132,12 @@ TEST_F(BelZWriterTest, WriteData_Dispatcher) {
 
 TEST_F(BelZWriterTest, WriteMeta_Integration) {
     MetaData meta;
-    meta.AddOffset(0);
-    meta.AddOffset(1024);
+    meta.AddBatchOffset(0);
+    meta.AddBatchOffset(1024);
     meta.AddRows(100);
+    meta.AddRows(200);
+    meta.AddColumnOffset(0);
+    meta.AddColumnOffset(1024);
     
     Scheme scheme;
     scheme.Push_Back({"col1", ColumnType::Int64});
@@ -149,5 +152,61 @@ TEST_F(BelZWriterTest, WriteMeta_Integration) {
     }
 
     auto data = ReadBinaryFile(belzPath);
-    EXPECT_GT(data.size(), 8); 
+    ASSERT_GT(data.size(), 8);
+
+    const uint8_t* ptr = data.data();
+    const size_t file_size = data.size();
+
+    uint64_t meta_start = 0;
+    std::memcpy(&meta_start, ptr + file_size - sizeof(uint64_t), sizeof(uint64_t));
+    ASSERT_LT(meta_start, file_size - sizeof(uint64_t));
+
+    const uint8_t* meta_ptr = ptr + meta_start;
+    size_t col_count = 0;
+    std::memcpy(&col_count, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    ASSERT_EQ(col_count, 1u);
+
+    size_t name_len = 0;
+    std::memcpy(&name_len, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    std::string col_name(reinterpret_cast<const char*>(meta_ptr), name_len);
+    meta_ptr += name_len;
+    EXPECT_EQ(col_name, "col1");
+
+    uint8_t type = 0;
+    std::memcpy(&type, meta_ptr, sizeof(uint8_t));
+    meta_ptr += sizeof(uint8_t);
+    EXPECT_EQ(type, static_cast<uint8_t>(ColumnType::Int64));
+
+    size_t batches_count = 0;
+    std::memcpy(&batches_count, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    ASSERT_EQ(batches_count, 2u);
+
+    size_t batch_offset_0 = 0;
+    size_t batch_offset_1 = 0;
+    std::memcpy(&batch_offset_0, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    std::memcpy(&batch_offset_1, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    EXPECT_EQ(batch_offset_0, 0u);
+    EXPECT_EQ(batch_offset_1, 1024u);
+
+    size_t rows_0 = 0;
+    size_t rows_1 = 0;
+    std::memcpy(&rows_0, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    std::memcpy(&rows_1, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    EXPECT_EQ(rows_0, 100u);
+    EXPECT_EQ(rows_1, 200u);
+
+    size_t col_offset_0 = 0;
+    size_t col_offset_1 = 0;
+    std::memcpy(&col_offset_0, meta_ptr, sizeof(size_t));
+    meta_ptr += sizeof(size_t);
+    std::memcpy(&col_offset_1, meta_ptr, sizeof(size_t));
+    EXPECT_EQ(col_offset_0, 0u);
+    EXPECT_EQ(col_offset_1, 1024u);
 }

@@ -36,17 +36,20 @@ protected:
         // Генерируем данные
         for (size_t b = 0; b < num_batches; ++b) {
             // 1. Запоминаем смещение начала батча
-            meta.AddOffset(writer.GetOffSet());
+            meta.AddBatchOffset(writer.GetOffSet());
             meta.AddRows(rows_per_batch);
             meta.AddCodec(0); // Заглушка, если есть
 
             // 2. Пишем КОЛОНКУ 1 (id) целиком для этого батча
+            meta.AddColumnOffset(writer.GetOffSet());
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 int64_t val = (b * rows_per_batch) + r; // id = 0, 1, 2...
-                writer.WriteData(std::to_string(val).data() , std::to_string(val).size(), ColumnType::Int64);
+                std::string val_str = std::to_string(val);
+                writer.WriteData(val_str.data(), val_str.size(), ColumnType::Int64);
             }
 
             // 3. Пишем КОЛОНКУ 2 (name) целиком для этого батча
+            meta.AddColumnOffset(writer.GetOffSet());
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 std::string val = "name_" + std::to_string((b * rows_per_batch) + r);
                 writer.WriteData(val.data(), val.size(), ColumnType::String);
@@ -66,7 +69,6 @@ TEST_F(BelZReaderTest, ReadSingleBatch) {
     BelZReader reader(testFileBelZ);
     
     ASSERT_FALSE(reader.Empty());
-
     Batch batch;
     reader.ReadBatch(batch);
 

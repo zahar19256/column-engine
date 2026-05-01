@@ -6,7 +6,8 @@
 #include <iostream>
 
 CSVReader::CSVReader(const std::string& filePath , size_t bucket_size) : filePath_(filePath) , bucket_size_(bucket_size) {
-    stream_ = std::ifstream(filePath_ , std::ios::binary);
+    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
+    stream_.open(filePath_ , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading: " + filePath);
     }
@@ -26,7 +27,7 @@ void CSVReader::BOMHelper() {
 
 void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
     CURSOR_STATE state = CURSOR_STATE::NOT_IN_QUOTE;
-    size_t current_len = data.data_.size();
+    size_t current_len = data.LastOffset();
     std::string field;
     while (true) {
         if (!std::getline(stream_, field)) {
@@ -46,16 +47,16 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
                 if (cur == '"') {
                     if (i + 1 < n && buf[i + 1] == '"') {
                         if (i > offset) {
-                            data.data_.append(buf + offset, i - offset);
+                            data.AppendString(buf + offset, i - offset , current_len);
                             current_len += i - offset;
                         }
-                        data.data_.push_back('"');
+                        data.Push_Back("\"" , current_len);
                         ++current_len;
                         ++i;
                         offset = i + 1;
                     } else {
                         if (i > offset) {
-                            data.data_.append(buf + offset, i - offset);
+                            data.AppendString(buf + offset, i - offset , current_len);
                             current_len += i - offset;
                         }
                         offset = i + 1;
@@ -65,7 +66,7 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
             } else {
                 if (cur == delimiter) {
                     if (i > offset) {
-                        data.data_.append(buf + offset, i - offset);
+                        data.AppendString(buf + offset, i - offset , current_len);
                         current_len += i - offset;
                     }
                     data.PushOffset(current_len);
@@ -73,7 +74,7 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
                 } else {
                     if (cur == '"') {
                         if (i > offset) {
-                            data.data_.append(buf + offset, i - offset);
+                            data.AppendString(buf + offset, i - offset , current_len);
                             current_len += i - offset;
                         }
                         offset = i + 1;
@@ -83,12 +84,12 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
             }
         }
         if (n > offset) {
-            data.data_.append(buf + offset, n - offset);
+            data.AppendString(buf + offset, n - offset , current_len);
             current_len += n - offset;
         }
         if (state == CURSOR_STATE::IN_QUOTE) {
             if (has_delim) {
-                data.data_.push_back('\n');
+                data.Push_Back("\n" , current_len);
                 ++current_len;
             }
             continue;

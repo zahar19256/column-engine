@@ -1,0 +1,128 @@
+[
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/data_structures.dir/DataStructures/Batch.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Batch.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Batch.cpp",
+  "output": "CMakeFiles/data_structures.dir/DataStructures/Batch.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/data_structures.dir/DataStructures/Scheme.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Scheme.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Scheme.cpp",
+  "output": "CMakeFiles/data_structures.dir/DataStructures/Scheme.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/data_structures.dir/DataStructures/MetaData.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/MetaData.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/MetaData.cpp",
+  "output": "CMakeFiles/data_structures.dir/DataStructures/MetaData.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/CSVReader.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVReader.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVReader.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/CSVReader.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/CSVWriter.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVWriter.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVWriter.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/CSVWriter.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/BelZReader.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZReader.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZReader.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/BelZReader.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/BelZWriter.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZWriter.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZWriter.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/BelZWriter.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/CSVConvertor.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVConvertor.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVConvertor.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/CSVConvertor.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++  -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/file_tools.dir/src/BelZConvertor.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZConvertor.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZConvertor.cpp",
+  "output": "CMakeFiles/file_tools.dir/src/BelZConvertor.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_scheme.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_scheme.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_scheme.cpp",
+  "output": "CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_scheme.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_metadata.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_metadata.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_metadata.cpp",
+  "output": "CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_metadata.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_column.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_column.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_column.cpp",
+  "output": "CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_column.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_batch.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_batch.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Tests/test_batch.cpp",
+  "output": "CMakeFiles/test_data_structures.dir/DataStructures/Tests/test_batch.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_CSVReader.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVReader.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVReader.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_CSVReader.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_CSVWriter.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVWriter.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVWriter.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_CSVWriter.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_BelZReader.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZReader.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZReader.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_BelZReader.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_BelZWriter.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZWriter.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZWriter.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_BelZWriter.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_CSVConvertor.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVConvertor.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_CSVConvertor.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_CSVConvertor.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_BelZConvertor.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZConvertor.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZConvertor.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_BelZConvertor.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_src.dir/src/Tests/test_BelZConvertorAdvanced.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZConvertorAdvanced.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/test_BelZConvertorAdvanced.cpp",
+  "output": "CMakeFiles/test_src.dir/src/Tests/test_BelZConvertorAdvanced.cpp.o"
+},
+{
+  "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/bench.cpp",
+  "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/bench.cpp",
+  "output": "CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o"
+}
+]

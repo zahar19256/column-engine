@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <vector>
 #include <string>
 #include <memory.h>
@@ -11,15 +12,36 @@ public:
         offset_.reserve(offset_.size() + source_offset.size());
         offset_.insert(offset_.end() , source_offset.begin() , source_offset.end());
     }
-    void AppendString(const char* start , size_t size) {
-        int now = 0;
-        if (!offset_.empty()) {
-            now = offset_.back();
+    void Reserve(size_t size) {
+        data_.resize(size);
+    }
+    void Push_Back(std::string val , size_t offset) {
+        size_t size = val.size();
+        const char* start = val.data();
+        size_t new_size = data_.size();
+        if (new_size < offset + size) {
+            if (new_size == 0) {
+                new_size = 4096;
+            }
+            while (offset + size > new_size) {
+                new_size <<= 1;
+            }
+            data_.resize(new_size);
         }
-        if (data_.capacity() - now >= size) {
-            
+        memcpy(data_.data() + offset , start , size);
+    }
+    void AppendString(const char* start , size_t size , size_t offset) {
+        size_t new_size = data_.size();
+        if (new_size < offset + size) {
+            if (new_size == 0) {
+                new_size = 4096;
+            }
+            while (offset + size > new_size) {
+                new_size <<= 1;
+            }
+            data_.resize(new_size);
         }
-        throw std::runtime_error("NOT IMPLEMETED Append");
+        memcpy(data_.data() + offset , start , size);
     }
     void Add(std::string val) {
         data_.append(val);
@@ -32,7 +54,6 @@ public:
         return offset_.empty();
     }
     void Clear() {
-        data_.clear();
         offset_.clear();
         columns_.clear();
         rows_ = 0;
