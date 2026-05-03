@@ -1,2 +1,0 @@
-/usr/bin/ar qc libfile_tools.a CMakeFiles/file_tools.dir/src/CSVReader.cpp.o CMakeFiles/file_tools.dir/src/CSVWriter.cpp.o CMakeFiles/file_tools.dir/src/BelZReader.cpp.o CMakeFiles/file_tools.dir/src/BelZWriter.cpp.o CMakeFiles/file_tools.dir/src/CSVConvertor.cpp.o CMakeFiles/file_tools.dir/src/BelZConvertor.cpp.o
-/usr/bin/ranlib libfile_tools.a
