@@ -283,5 +283,6 @@ CMakeFiles/test_src.dir/src/Tests/test_BelZWriter.cpp.o: \
  /usr/include/c++/15.2.1/bits/fs_ops.h \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/BelZWriter.h \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Scheme.h \
- /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/MetaData.h \
- /usr/include/c++/15.2.1/cstring
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Column.h \
+ /usr/include/c++/15.2.1/cstring /usr/include/memory.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/MetaData.h

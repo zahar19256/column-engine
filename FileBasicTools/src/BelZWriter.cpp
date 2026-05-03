@@ -3,6 +3,7 @@
 #include "Column.h"
 #include "Scheme.h"
 #include <charconv>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
@@ -37,7 +38,7 @@ BelZWriter::BelZWriter(const std::string& CSVFilePath) {
 }
 
 uint64_t BelZWriter::GetOffSet() {
-    return fout_.tellp();
+    return static_cast<uint64_t>(fout_.tellp()) + offset_;
 }
 
 void BelZWriter::Append(const char* data , size_t size , ColumnType type) {
@@ -65,7 +66,11 @@ void BelZWriter::AppendColumn(std::shared_ptr<Column> column , ColumnType type) 
     if (type == ColumnType::String) {
         size_t data_sz = As<StringColumn>(column)->GetDataSize();
         size_t offset_sz = As<StringColumn>(column)->Size();
-        EnsureCapacity(offset_sz * sizeof(size_t) + data_sz);
+        EnsureCapacity(offset_sz * sizeof(size_t) + data_sz + 2 * sizeof(size_t));
+        memcpy(buf_.data() + offset_ , &data_sz , sizeof(data_sz));
+        offset_ += sizeof(data_sz);
+        memcpy(buf_.data() + offset_ , &offset_sz , sizeof(offset_sz));
+        offset_ += sizeof(offset_sz);
         memcpy(buf_.data() + offset_ , As<StringColumn>(column)->GetDataPointer() , data_sz);
         offset_ += data_sz;
         memcpy(buf_.data() + offset_ , As<StringColumn>(column)->GetOffsetPointer() , offset_sz * sizeof(size_t));

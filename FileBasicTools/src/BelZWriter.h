@@ -25,6 +25,9 @@ public:
 
     template <typename T>
     void WriteMeta(T&& meta_) {
+        if (offset_ != 0) {
+            Flush();
+        }
         uint64_t meta_start_offset = static_cast<uint64_t>(fout_.tellp());
         uint64_t batches_count = meta_.BatchesCount();
         uint64_t col_count = meta_.GetScheme().Size();
@@ -37,9 +40,9 @@ public:
         fout_.write(reinterpret_cast<const char*>(&meta_start_offset) , sizeof(meta_start_offset));
     }
 private:
-    static constexpr size_t kStreamBufferSize = 8 * 1024 * 1024;
-    std::ofstream fout_;
+    static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;
     std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
+    std::ofstream fout_;
     std::string buf_;
     size_t offset_ = 0;
 };

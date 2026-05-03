@@ -88,25 +88,30 @@ TEST_F(CSVConvertorTest, EndToEnd_TranspositionCheck) {
     ptr += sizeof(int64_t);
     EXPECT_EQ(val2, 20);
     // --- Проверяем Колонку 2 (String) ---
-    // Строки пишутся как [Length][Data] (исходя из тестов BelZWriter)
-    // Строка 1: "Alice"
-    size_t len1 = 0;
-    std::memcpy(&len1, ptr, sizeof(size_t));
+    // Строковая колонка пишется блочно: [data_size][offsets_count][data][offsets].
+    size_t data_size = 0;
+    std::memcpy(&data_size, ptr, sizeof(size_t));
     ptr += sizeof(size_t);
-    EXPECT_EQ(len1, 5); // Alice length
+    EXPECT_EQ(data_size, 8); // AliceBob
 
-    std::string str1(ptr, ptr + len1);
-    ptr += len1;
-    EXPECT_EQ(str1, "Alice");
-    // Строка 2: "Bob"
-    size_t len2 = 0;
-    std::memcpy(&len2, ptr, sizeof(size_t));
+    size_t offsets_count = 0;
+    std::memcpy(&offsets_count, ptr, sizeof(size_t));
     ptr += sizeof(size_t);
-    EXPECT_EQ(len2, 3); // Bob length
+    EXPECT_EQ(offsets_count, 2);
 
-    std::string str2(ptr, ptr + len2);
-    ptr += len2;
-    EXPECT_EQ(str2, "Bob");
+    std::string data_blob(reinterpret_cast<const char*>(ptr), data_size);
+    ptr += data_size;
+    EXPECT_EQ(data_blob, "AliceBob");
+
+    size_t offset1 = 0;
+    std::memcpy(&offset1, ptr, sizeof(size_t));
+    ptr += sizeof(size_t);
+    EXPECT_EQ(offset1, 5);
+
+    size_t offset2 = 0;
+    std::memcpy(&offset2, ptr, sizeof(size_t));
+    ptr += sizeof(size_t);
+    EXPECT_EQ(offset2, 8);
     
     // После данных должны идти Метаданные (Footer), но их мы детально проверяли в BelZWriter.
     // Главное, что мы подтвердили транспонирование: сначала все ID, потом все Имена.

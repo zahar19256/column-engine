@@ -286,4 +286,6 @@ CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o: \
  /usr/include/memory.h /usr/include/error.h /usr/include/bits/error.h \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Scheme.h \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/MetaData.h \
- /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVReader.h
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVReader.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Batch.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Column.h

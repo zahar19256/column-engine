@@ -121,7 +121,7 @@
 },
 {
   "directory": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/build_release",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -o CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/bench.cpp",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures -I/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src  -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function -O3 -DNDEBUG -std=gnu++20 -O3 -march=native -mtune=native -o CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o -c /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/bench.cpp",
   "file": "/home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/Tests/bench.cpp",
   "output": "CMakeFiles/test_bench.dir/src/Tests/bench.cpp.o"
 }

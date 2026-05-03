@@ -24,7 +24,7 @@ public:
 
     void WriteBatch(const Batch& batch);
 private:
-    static constexpr size_t kStreamBufferSize = 4 * 1024 * 1024;
+    static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;
     std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
     std::ofstream fout_;
 };

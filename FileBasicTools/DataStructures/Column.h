@@ -18,7 +18,10 @@ public:
 class StringColumn final : public Column {
 public:
     void Reserve(size_t n) override {
-        data_.reserve(n);
+        data_.resize(n);
+    }
+    void ReserveOffset(size_t n) {
+        offsets_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
         data_.append(start , size);
@@ -40,7 +43,7 @@ public:
         data_.append(value);
         offsets_.push_back(data_.size());
     }
-    const char* GetDataPointer() {
+    char* GetDataPointer() {
         return data_.data();
     }
     const std::string& GetData() {
@@ -49,6 +52,7 @@ public:
     size_t GetDataSize() {
         return data_.size();
     }
+
     std::string operator[](size_t index) {
         if (index >= offsets_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
@@ -117,6 +121,9 @@ public:
         data_.push_back(value);
     }
     int64_t* Data() noexcept {
+        return data_.data();
+    }
+    const int64_t* Data() const noexcept {
         return data_.data();
     }
     int64_t operator[](size_t index) const {

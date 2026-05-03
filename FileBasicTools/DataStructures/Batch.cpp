@@ -66,6 +66,7 @@ void Batch::Init(const Scheme& scheme) {
 
 void Batch::AddColumn(std::shared_ptr<Column> column) {
     data_.push_back(column);
+    rows_ = column->Size();
 }
 
 void Batch::AddRowFromCSV(const StringBacket& val) {

@@ -8,7 +8,7 @@
 #include "Batch.h"
 
 static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 8;
-static size_t STANDART_ROWS_COUNT = 128;
+static size_t STANDART_ROWS_COUNT = 4096;
 
 class CSVReader {
 public:
@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    static constexpr size_t kStreamBufferSize = 8 * 1024 * 1024;
+    static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;
     enum class CURSOR_STATE {
         IN_QUOTE,
         NOT_IN_QUOTE,

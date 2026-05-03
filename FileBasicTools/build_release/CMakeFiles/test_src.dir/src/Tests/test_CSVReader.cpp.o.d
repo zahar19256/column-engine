@@ -284,4 +284,7 @@ CMakeFiles/test_src.dir/src/Tests/test_CSVReader.cpp.o: \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/src/CSVReader.h \
  /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Row.h \
  /usr/include/c++/15.2.1/cstring /usr/include/memory.h \
- /usr/include/error.h /usr/include/bits/error.h
+ /usr/include/error.h /usr/include/bits/error.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Batch.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Scheme.h \
+ /home/zahar/Документы/colomn-engine/column-engine/FileBasicTools/DataStructures/Column.h
