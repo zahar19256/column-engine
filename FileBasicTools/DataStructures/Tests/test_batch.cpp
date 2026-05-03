@@ -8,20 +8,18 @@
 #include <memory>
 
 // Вспомогательная функция для создания тестового чанка
-std::vector<Row<std::string>> CreateMockChunk() {
-    std::vector<Row<std::string>> chunk;
+StringBacket CreateMockChunk() {
+    StringBacket chunk;
     
     // Строка 1: "100", "Alice"
-    Row<std::string> row1;
-    row1.Add("100");
-    row1.Add("Alice");
-    chunk.push_back(row1);
+    chunk.Add("100");
+    chunk.Add("Alice");
+    chunk.EndRow();
 
     // Строка 2: "200", "Bob"
-    Row<std::string> row2;
-    row2.Add("200");
-    row2.Add("Bob");
-    chunk.push_back(row2);
+    chunk.Add("200");
+    chunk.Add("Bob");
+    chunk.EndRow();
 
     return chunk;
 }
@@ -105,11 +103,9 @@ TEST(BatchTest, ConstructorFromChunk_InvalidData) {
     Scheme scheme;
     scheme.Push_Back({"must_be_int", ColumnType::Int64});
 
-    Row<std::string> badRow;
-    badRow.Add("NOT_A_NUMBER"); // Это вызовет ошибку в Int64Column::AppendFromString
-
-    std::vector<Row<std::string>> chunk;
-    chunk.push_back(badRow);
+    StringBacket chunk;
+    chunk.Add("NOT_A_NUMBER"); // Это вызовет ошибку в Int64Column::AppendFromString
+    chunk.EndRow();
 
     // Ожидаем, что Batch не проглотит исключение, а выбросит его дальше
     // std::stoll кидает invalid_argument
@@ -121,10 +117,9 @@ TEST(BatchTest, Clear) {
     Scheme scheme;
     scheme.Push_Back({"col", ColumnType::Int64});
     
-    std::vector<Row<std::string>> chunk;
-    Row<std::string> row; 
-    row.Add("1");
-    chunk.push_back(row);
+    StringBacket chunk;
+    chunk.Add("1");
+    chunk.EndRow();
 
     Batch batch(chunk, scheme);
     ASSERT_EQ(batch.Size(), 1);

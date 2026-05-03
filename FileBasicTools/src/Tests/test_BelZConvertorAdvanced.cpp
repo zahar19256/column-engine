@@ -8,6 +8,7 @@
 #include "BelZConvertor.h"
 #include "CSVConvertor.h"
 #include "CSVReader.h"
+#include "Row.h"
 
 namespace fs = std::filesystem;
 
@@ -40,7 +41,7 @@ protected:
         
         // Читаем батчами, чтобы не забивать память, если файл огромный
         while (true) {
-            std::vector<Row<std::string>> chunk;
+            std::vector<StringBacket> chunk;
             reader.ReadChunk(chunk);
             if (chunk.empty()) break;
 

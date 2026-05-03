@@ -10,6 +10,7 @@ CSVWriter::CSVWriter(const std::string& filePath) {
     std::string stem_name = src_path.stem().string();
     std::string new_filename = stem_name + "upd.csv";
     std::filesystem::path dest_path = src_path.parent_path() / new_filename;
+    fout_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
     fout_.open(dest_path, std::ios::out); 
     if (!fout_.is_open()) {
         throw std::runtime_error("Failed to create file: " + dest_path.string());

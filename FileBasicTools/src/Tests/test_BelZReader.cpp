@@ -36,21 +36,27 @@ protected:
         // Генерируем данные
         for (size_t b = 0; b < num_batches; ++b) {
             // 1. Запоминаем смещение начала батча
-            meta.AddOffset(writer.GetOffSet());
+            meta.AddBatchOffset(writer.GetOffSet());
             meta.AddRows(rows_per_batch);
             meta.AddCodec(0); // Заглушка, если есть
 
-            // 2. Пишем КОЛОНКУ 1 (id) целиком для этого батча
+            // 2. Пишем колонки новым блочным форматом: Int64 raw block, String data+offsets block.
+            meta.AddColumnOffset(writer.GetOffSet());
+            auto id_column = std::make_shared<Int64Column>();
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 int64_t val = (b * rows_per_batch) + r; // id = 0, 1, 2...
-                writer.WriteData(std::to_string(val), ColumnType::Int64);
+                id_column->Push_Back(val);
             }
+            writer.AppendColumn(id_column, ColumnType::Int64);
 
-            // 3. Пишем КОЛОНКУ 2 (name) целиком для этого батча
+            meta.AddColumnOffset(writer.GetOffSet());
+            auto name_column = std::make_shared<StringColumn>();
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 std::string val = "name_" + std::to_string((b * rows_per_batch) + r);
-                writer.WriteData(val, ColumnType::String);
+                name_column->Push_Back(val);
             }
+            writer.AppendColumn(name_column, ColumnType::String);
+            writer.Flush();
         }
 
         // 4. Пишем метаданные в конец файла
@@ -66,7 +72,6 @@ TEST_F(BelZReaderTest, ReadSingleBatch) {
     BelZReader reader(testFileBelZ);
     
     ASSERT_FALSE(reader.Empty());
-
     Batch batch;
     reader.ReadBatch(batch);
 

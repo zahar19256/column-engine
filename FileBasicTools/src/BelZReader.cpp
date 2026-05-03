@@ -1,5 +1,6 @@
 #include "BelZReader.h"
 #include "Column.h"
+#include "MetaData.h"
 #include "Scheme.h"
 #include <filesystem>
 #include <stdexcept>
@@ -9,7 +10,8 @@ BelZReader::BelZReader(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
         throw std::runtime_error("File not found: " + filePath);
     }
-    stream_ = std::ifstream(filePath , std::ios::binary);
+    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
+    stream_.open(filePath , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading in BelZReader constructor: " + filePath);
     }
@@ -32,23 +34,28 @@ std::shared_ptr<Column> BelZReader::ReadInt64Column(size_t size) {
 
 std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
     auto result = std::make_shared<StringColumn>();
-    for (size_t i = 0; i < size; ++i) {
-        size_t len;
-        stream_.read(reinterpret_cast<char*>(&len) , sizeof(len));
-        std::string str;
-        str.resize(len);
-        if (len > 0) {
-            stream_.read(&str[0], static_cast<std::streamsize>(len));
-            if (!stream_) {
-                throw std::runtime_error("Failed to read string data");
-            }
-        }
-        result->Push_Back(std::move(str));
+    size_t data_sz;
+    size_t offset_sz;
+    stream_.read(reinterpret_cast<char*>(&data_sz) , sizeof(size_t));
+    stream_.read(reinterpret_cast<char*>(&offset_sz) , sizeof(size_t));
+    if (!stream_) {
+        throw std::runtime_error("Failed to read StringColumn header");
     }
+    if (offset_sz != size) {
+        throw std::runtime_error("StringColumn size mismatch: expected " + std::to_string(size) + ", got " + std::to_string(offset_sz));
+    }
+    result->Reserve(data_sz);
+    result->ReserveOffset(offset_sz);
+    stream_.read((result->GetDataPointer()) , data_sz);
+
+    stream_.read(reinterpret_cast<char*>(result->GetOffsetPointer()) , offset_sz * sizeof(size_t));
     return result;
 }
 
-std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type) {
+std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , ssize_t need_offset) {
+    if (need_offset != -1) {
+        stream_.seekg(need_offset);  
+    }
     if (type == ColumnType::Int64) {
         return ReadInt64Column(size);
     }
@@ -82,12 +89,17 @@ void BelZReader::ReadMetaData() {
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t offset;
         stream_.read(reinterpret_cast<char*>(&offset) , sizeof(offset));
-        meta_.AddOffset(offset);
+        meta_.AddBatchOffset(offset);
     }
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t rows;
         stream_.read(reinterpret_cast<char*>(&rows) , sizeof(rows));
         meta_.AddRows(rows);
+    }
+    for (size_t i = 0; i < batches_left_ * col_count; ++i) {
+        size_t offset;
+        stream_.read(reinterpret_cast<char*>(&offset) , sizeof(offset));
+        meta_.AddColumnOffset(offset);
     }
 }
 
@@ -96,7 +108,7 @@ void BelZReader::ReadBatch(Batch& batch) {
         throw std::runtime_error("Try to read Batch after end of file!");
     }
     batch.Clear(); 
-    size_t current_offset = meta_.GetOffset(index_of_batch);
+    size_t current_offset = meta_.GetBatchOffset(index_of_batch);
     stream_.seekg(current_offset, std::ios::beg);
     batch.SetScheme(scheme_); 
     size_t rows_count = meta_.GetRow(index_of_batch);
@@ -107,4 +119,40 @@ void BelZReader::ReadBatch(Batch& batch) {
     }
     --batches_left_;
     ++index_of_batch;
+}
+
+void BelZReader::ScanBatch(size_t index , Batch& batch) {
+    if (index >= meta_.BatchesCount()) {
+        throw std::runtime_error("Batch index out of range in ScanBatch: " + std::to_string(index));
+    }
+    batch.Clear(); 
+    size_t current_offset = meta_.GetBatchOffset(index);
+    stream_.seekg(current_offset, std::ios::beg);
+    batch.SetScheme(scheme_); 
+    size_t rows_count = meta_.GetRow(index);
+
+    for (size_t column = 0; column < scheme_.Size(); ++column) {
+        batch.AddColumn(ReadColumn(rows_count, scheme_.GetType(column)));
+    }
+}
+
+MetaData BelZReader::GetMetaData() const {
+    return meta_;
+}
+
+Scheme BelZReader::GetScheme() const {
+    return scheme_;
+}
+
+std::shared_ptr<Column> BelZReader::ReadColumn(size_t batch_id , size_t column_id) {
+    if (batch_id >= meta_.BatchesCount()) {
+        throw std::runtime_error("Batch ID out of range in ReadColumn: " + std::to_string(batch_id));
+    }
+    if (column_id >= scheme_.Size()) {
+        throw std::runtime_error("Column ID out of range in ReadColumn: " + std::to_string(column_id));
+    }
+    size_t offset = meta_.GetColumnOffset(batch_id, column_id);
+    ColumnType type = scheme_.GetType(column_id);
+    size_t rows = meta_.GetRow(batch_id);
+    return ReadColumn(rows, type, offset);
 }
