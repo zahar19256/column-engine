@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include "../Functions/Expression.h"
+#include "../Functions/Aggregation.h"
 
 namespace LogicPlaner {
     struct QueryNode {
@@ -22,7 +23,7 @@ namespace LogicPlaner {
     };
     struct AggregateNode : QueryNode {
         std::vector<std::shared_ptr<Expr>> group_by_;
-        // std::vector<AggregateCall> aggregates_; TODO придумать чё тут и как делать 
+        std::vector<Aggregation::AggregationCall> aggregates_;
     };
     struct OrderByNode : QueryNode {
         // std::vector<OrderBy> order_by_; TODO придумать чё тут и как делать 

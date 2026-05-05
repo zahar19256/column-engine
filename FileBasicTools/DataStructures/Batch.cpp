@@ -2,6 +2,7 @@
 #include "Column.h"
 #include "Row.h"
 #include "Scheme.h"
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -80,11 +81,44 @@ void Batch::SetScheme(const Scheme& scheme) {
     scheme_ = scheme;
 }
 
+void Batch::InitMsk() {
+    mask_.resize(GetRows() , true);
+}
+
+void Batch::SetMsk(const boost::dynamic_bitset<>& mask) {
+    mask_ = mask;
+}
+
+void Batch::SetMsk(boost::dynamic_bitset<>&& msk) {
+    mask_ = std::move(msk);
+}
+
+void Batch::ApplyMsk(const boost::dynamic_bitset<>& mask) {
+    if (!has_mask_) {
+        mask_ = mask;
+        has_mask_ = true;
+    } else {
+        mask_ &= mask;
+    }
+}
+
 std::shared_ptr<Column> Batch::GetColumn(size_t index) const {
     if (index >= data_.size()) {
         throw std::runtime_error("Index of column is out of batch range");
     }
     return data_[index];
+}
+
+std::shared_ptr<Column> Batch::GetColumn(const std::string& column_name) const {
+    size_t index = scheme_.GetIndex(column_name);
+    if (index >= Size()) {
+        throw std::runtime_error("Column id is bigger than batch size!");
+    }
+    return GetColumn(index); 
+}
+
+const boost::dynamic_bitset<>& Batch::GetMsk() const {
+    return mask_;
 }
 
 size_t Batch::Size() const {
@@ -98,6 +132,8 @@ bool Batch::Empty() const {
 void Batch::Clear() {
     data_.clear();
     scheme_.Clear();
+    mask_.clear();
+    has_mask_ = false;
     rows_ = 0;
 }
 

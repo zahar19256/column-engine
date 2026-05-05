@@ -4,6 +4,7 @@
 #include "Row.h"
 #include <vector>
 #include <memory>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
 
 class Batch {
 public:
@@ -13,12 +14,21 @@ public:
     }
     void Init(const Scheme& scheme);
     void Init();
+    void InitMsk();
+    void SetScheme(const Scheme& scheme);
+    void SetMsk(const boost::dynamic_bitset<>& msk);
+    void SetMsk(boost::dynamic_bitset<>&& msk);
+    void ApplyMsk(const boost::dynamic_bitset<>& msk);
     void AddColumn(std::shared_ptr<Column> column);
     void AddRowFromCSV(const StringBacket& val);
-    void SetScheme(const Scheme& scheme);
+
     ColumnType GetType(size_t index) const;
+    const Scheme& GetScheme() const;
+    const boost::dynamic_bitset<>& GetMsk() const;
     size_t GetRows() const;
     std::shared_ptr<Column> GetColumn(size_t index) const;
+    std::shared_ptr<Column> GetColumn(const std::string& column_name) const;
+
     size_t Size() const;
     bool Empty() const;
     void Clear();
@@ -27,5 +37,7 @@ private:
     void ChunkToBatch(const StringBacket& chunk);
     Scheme scheme_;
     std::vector <std::shared_ptr<Column>> data_;
+    boost::dynamic_bitset<> mask_;
+    bool has_mask_ = false;
     size_t rows_ = 0;
 };

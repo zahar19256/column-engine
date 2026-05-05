@@ -2,7 +2,6 @@
 #include "../../FileBasicTools/DataStructures/Column.h"
 #include "../../FileBasicTools/DataStructures/Types.h"
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
-#include <bitset>
 #include <memory>
 #include <stdexcept>
 
