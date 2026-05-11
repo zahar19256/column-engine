@@ -107,7 +107,7 @@ void BelZReader::ReadBatch(Batch& batch) {
     if (batches_left_ == 0) {
         throw std::runtime_error("Try to read Batch after end of file!");
     }
-    batch.Clear(); 
+    batch.Clear();
     size_t current_offset = meta_.GetBatchOffset(index_of_batch);
     stream_.seekg(current_offset, std::ios::beg);
     batch.SetScheme(scheme_); 
@@ -125,7 +125,7 @@ void BelZReader::ScanBatch(size_t index , Batch& batch) {
     if (index >= meta_.BatchesCount()) {
         throw std::runtime_error("Batch index out of range in ScanBatch: " + std::to_string(index));
     }
-    batch.Clear(); 
+    batch.Clear();
     size_t current_offset = meta_.GetBatchOffset(index);
     stream_.seekg(current_offset, std::ios::beg);
     batch.SetScheme(scheme_); 
@@ -136,12 +136,41 @@ void BelZReader::ScanBatch(size_t index , Batch& batch) {
     }
 }
 
+void BelZReader::ReadBatch(Batch& batch , const std::vector<std::string>& column_names) {
+    if (batches_left_ == 0) {
+        throw std::runtime_error("Try to read Batch after end of file!");
+    }
+    batch.Clear();
+    const size_t rows_count = meta_.GetRow(index_of_batch);
+    Scheme projection_scheme;
+    for (const auto& name : column_names) {
+        size_t id = scheme_.GetIndex(name);
+        projection_scheme.Push_Back(scheme_.GetInfo(id));
+    }
+    batch.SetScheme(projection_scheme);
+    batch.SetRows(rows_count);
+    for (size_t column = 0; column < column_names.size(); ++column) {
+        auto col_ptr = ReadColumn(index_of_batch , scheme_.GetIndex(column_names[column]));
+        batch.AddColumn(col_ptr);
+    }
+    --batches_left_;
+    ++index_of_batch;
+}
+
 MetaData BelZReader::GetMetaData() const {
     return meta_;
 }
 
-Scheme BelZReader::GetScheme() const {
+const Scheme& BelZReader::GetScheme() const {
     return scheme_;
+}
+
+size_t BelZReader::RowsCount() const {
+    size_t result = 0;
+    for (size_t rows : meta_.GetRows()) {
+        result += rows;
+    }
+    return result;
 }
 
 std::shared_ptr<Column> BelZReader::ReadColumn(size_t batch_id , size_t column_id) {

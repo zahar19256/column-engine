@@ -8,6 +8,9 @@ ColumnType DatumConvertor(const std::string& type) {
     if (type == TypeInt64) {
         return  ColumnType::Int64;
     }
+    if (type == TypeInt128) {
+        return  ColumnType::Int128;
+    }
     if (type == TypeInt32) {
         return  ColumnType::Int32;
     }
@@ -79,4 +82,5 @@ size_t Scheme::Size() const {
 
 void Scheme::Clear() {
     columns_.clear();
+    columns_id_.clear();
 }

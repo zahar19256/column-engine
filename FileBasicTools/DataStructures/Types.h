@@ -124,6 +124,19 @@ namespace Data {
         return DaysFromZeroDate(year , month , day) - DaysFromZeroDate(1970 , 1 , 1);
     }
 
+    inline int64_t ParseDate(const std::string& start , size_t size) {
+        if (size != 10 || start[4] != '-' || start[7] != '-') {
+            throw std::runtime_error("Date format must be YYYY-MM-DD!");
+        }
+        int year = ParseSmallNumber(start , 0 , 4);
+        int month = ParseSmallNumber(start , 5 , 2);
+        int day = ParseSmallNumber(start , 8 , 2);
+        if (month < 1 || month > 12 || day < 1 || day > 31) {
+            throw std::runtime_error("Date value is out of range!");
+        }
+        return DaysFromZeroDate(year , month , day) - DaysFromZeroDate(1970 , 1 , 1);
+    }
+
     inline int64_t ParseTimestamp(const std::string& val) {
         if (val.size() != 19 || val[10] != ' ' || val[13] != ':' || val[16] != ':') {
             throw std::runtime_error("Timestamp format must be YYYY-MM-DD HH:MM:SS!");
@@ -159,6 +172,8 @@ namespace Data {
             case ColumnType::Int32:
             case ColumnType::Int64:
                 return ParseInt64(val);
+            case ColumnType::Int128:
+                throw std::runtime_error("Int128 filter values are not supported yet!");
             case ColumnType::Double:
                 return ParseDouble(val);
             case ColumnType::String:

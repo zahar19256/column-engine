@@ -1,5 +1,6 @@
 #include "Batch.h"
 #include "Column.h"
+#include "Types.h"
 #include "Row.h"
 #include "Scheme.h"
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
@@ -12,13 +13,7 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
         return;
     }
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(column) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
-        }
-        if (scheme_.GetType(column) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column));
         if (scheme_.GetType(column) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(column) + " type!");
         }
@@ -33,13 +28,7 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
 void Batch::Init() {
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(i) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
-        }
-        if (scheme_.GetType(i) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i));
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -51,13 +40,7 @@ void Batch::Init(const Scheme& scheme) {
     scheme_ = scheme;
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(i) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
-        }
-        if (scheme_.GetType(i) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i));
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -79,6 +62,10 @@ void Batch::AddRowFromCSV(const StringBacket& val) {
 
 void Batch::SetScheme(const Scheme& scheme) {
     scheme_ = scheme;
+}
+
+void Batch::SetRows(size_t rows) {
+    rows_ = rows;
 }
 
 void Batch::InitMsk() {
@@ -119,6 +106,10 @@ std::shared_ptr<Column> Batch::GetColumn(const std::string& column_name) const {
 
 const boost::dynamic_bitset<>& Batch::GetMsk() const {
     return mask_;
+}
+
+const Scheme& Batch::GetScheme() const {
+    return scheme_;
 }
 
 size_t Batch::Size() const {

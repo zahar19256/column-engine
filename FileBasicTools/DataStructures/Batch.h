@@ -16,6 +16,7 @@ public:
     void Init();
     void InitMsk();
     void SetScheme(const Scheme& scheme);
+    void SetRows(size_t rows);
     void SetMsk(const boost::dynamic_bitset<>& msk);
     void SetMsk(boost::dynamic_bitset<>&& msk);
     void ApplyMsk(const boost::dynamic_bitset<>& msk);

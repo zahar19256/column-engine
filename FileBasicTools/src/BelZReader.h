@@ -10,14 +10,17 @@ class BelZReader {
 public:
     BelZReader(const std::string& filePath);
     void ReadBatch(Batch& batch);
+    void ReadBatch(Batch& batch , const std::vector<std::string>& column_names);
     void ScanBatch(size_t index , Batch& batch);
     std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type , ssize_t need_offset = -1);
     std::shared_ptr<Column> ReadInt64Column(size_t size);
     std::shared_ptr<Column> ReadStringColumn(size_t size);
+    std::shared_ptr<Column> ReadColumn(size_t batch_id , size_t column_id);
+    std::shared_ptr<Column> ReadColumn(size_t columnd_id);
     void ReadMetaData();
     MetaData GetMetaData() const;
-    Scheme GetScheme() const;
-    std::shared_ptr<Column> ReadColumn(size_t batch_id , size_t column_id);
+    const Scheme& GetScheme() const;
+    size_t RowsCount() const;
     bool Empty() const;
 private:
     static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;

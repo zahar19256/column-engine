@@ -8,6 +8,7 @@ static std::string TypeInt8 = "int8";
 static std::string TypeInt16 = "int16";
 static std::string TypeInt32 = "int32";
 static std::string TypeInt64 = "int64";
+static std::string TypeInt128 = "int128";
 static std::string TypeString = "string";
 static std::string TypeDate = "date";
 static std::string TypeTimestamp = "timestamp";
@@ -15,14 +16,15 @@ static std::string TypeDouble = "double";
 
 enum class ColumnType : int8_t {
     Int8 = 0,
-    Int16,
-    Int32,
-    Int64,
-    Double,
-    String,
-    Date,
-    Timestamp,
-    Unknown,
+    Int16 = 1,
+    Int32 = 2,
+    Int64 = 3,
+    Double = 4,
+    String = 5,
+    Date = 6,
+    Timestamp = 7,
+    Unknown = 8,
+    Int128 = 9,
 };
 
 struct SchemeNode {

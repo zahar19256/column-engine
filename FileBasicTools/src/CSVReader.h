@@ -8,7 +8,7 @@
 #include "Batch.h"
 
 static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 8;
-static size_t STANDART_ROWS_COUNT = 4096;
+static size_t STANDART_ROWS_COUNT = 1024;
 
 class CSVReader {
 public:
