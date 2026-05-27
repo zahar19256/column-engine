@@ -1,6 +1,7 @@
 #pragma once
 #include "Scheme.h"
 #include "Types.h"
+#include "Utility.h"
 #include <string_view>
 #include <cstring>
 #include <memory>
@@ -12,23 +13,47 @@
 class Column {
 public:
     virtual void Reserve(size_t n) = 0;
+    virtual void Resize(size_t n) = 0;
     virtual void Clear() = 0;
     virtual void AppendFromString(const char* start , size_t size) = 0;
+
     virtual size_t Size() const = 0;
     virtual ColumnType GetType() const = 0;
+    virtual Utility::ScalarValue GetScalarValue(size_t index) const = 0;
+
     virtual ~Column() = default;
 };
 
 class StringColumn : public Column {
 public:
+    using ValueType = std::string;
     void Reserve(size_t n) override {
-        data_.resize(n);
+        offsets_.reserve(n);
+    }
+    void Resize(size_t n) override {
+        const size_t old_size = offsets_.size();
+        offsets_.resize(n);
+        for (size_t i = old_size; i < n; ++i) {
+            offsets_[i] = data_.size();
+        }
     }
     ColumnType GetType() const override {
         return ColumnType::String;
     }
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return std::string(At(index));
+    }
     void ReserveOffset(size_t n) {
+        offsets_.reserve(n);
+    }
+    void ResizeOffset(size_t n) {
         offsets_.resize(n);
+    }
+    void ReserveData(size_t n) {
+        data_.reserve(n);
+    }
+    void ResizeData(size_t n) {
+        data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
         data_.append(start , size);
@@ -50,13 +75,21 @@ public:
         data_.append(value);
         offsets_.push_back(data_.size());
     }
+    void Assign(size_t n , const std::string& value) {
+        Clear();
+        data_.reserve(value.size() * n);
+        offsets_.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+            Push_Back(value);
+        }
+    }
     char* GetDataPointer() {
         return data_.data();
     }
-    const std::string& GetData() {
+    const std::string& GetData() const {
         return data_;
     }
-    size_t GetDataSize() {
+    size_t GetDataSize() const {
         return data_.size();
     }
     std::string_view At(size_t index) const {
@@ -82,7 +115,7 @@ public:
     size_t* GetOffsetPointer() {
         return offsets_.data();
     }
-    const char* GetStringPointer(size_t index) {
+    const char* GetStringPointer(size_t index) const {
         if (index >= offsets_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }
@@ -92,7 +125,7 @@ public:
         }
         return data_.data() + start;
     }
-    size_t GetStringSize(size_t index) {
+    size_t GetStringSize(size_t index) const {
         if (index >= offsets_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }
@@ -116,26 +149,30 @@ private:
 
 class Int64Column : public Column {
 public:
+    using ValueType = int64_t;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Int64;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return At(index);
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
-        std::string now;
-        now.resize(size);
-        memcpy(now.data(), start, size);
-        data_.push_back(std::stoll(now));
+        data_.push_back(Data::ParseInteger<int64_t>(start , size));
     }
     void AppendFromString(std::string val) {
-        data_.push_back(std::stoll(val));
+        data_.push_back(Data::ParseInteger<int64_t>(val));
     }
     void Push_Back(int64_t value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , int64_t value) {
+        data_.assign(n , value);
     }
     int64_t* Data() noexcept {
         return data_.data();
@@ -167,13 +204,17 @@ private:
 
 class DoubleColumn : public Column {
 public:
+    using ValueType = double;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Double;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return At(index);
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
@@ -187,6 +228,9 @@ public:
     }
     void Push_Back(double value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , double value) {
+        data_.assign(n , value);
     }
     double* Data() noexcept {
         return data_.data();
@@ -220,26 +264,30 @@ private:
 // TODO переделать это на что-то шаблонное но потом после запросов!
 class Int32Column : public Column {
 public:
+    using ValueType = int32_t;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Int32;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return static_cast<int64_t>(At(index));
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
-        std::string now;
-        now.resize(size);
-        memcpy(now.data(), start, size);
-        data_.push_back(std::stoll(now));
+        data_.push_back(Data::ParseInteger<int32_t>(start , size));
     }
     void AppendFromString(std::string val) {
-        data_.push_back(std::stoi(val));
+        data_.push_back(Data::ParseInteger<int32_t>(val));
     }
     void Push_Back(int32_t value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , int32_t value) {
+        data_.assign(n , value);
     }
     int32_t* Data() noexcept {
         return data_.data();
@@ -271,26 +319,30 @@ private:
 
 class Int16Column : public Column {
 public:
+    using ValueType = int16_t;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Int16;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return static_cast<int64_t>(At(index));
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
-        std::string now;
-        now.resize(size);
-        memcpy(now.data(), start, size);
-        data_.push_back(std::stoll(now));
+        data_.push_back(Data::ParseInteger<int16_t>(start , size));
     }
     void AppendFromString(std::string val) {
-        data_.push_back(std::stoi(val));
+        data_.push_back(Data::ParseInteger<int16_t>(val));
     }
     void Push_Back(int16_t value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , int16_t value) {
+        data_.assign(n , value);
     }
     int16_t* Data() noexcept {
         return data_.data();
@@ -323,26 +375,30 @@ private:
 
 class Int8Column : public Column {
 public:
+    using ValueType = int8_t;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Int8;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return static_cast<int64_t>(At(index));
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
-        std::string now;
-        now.resize(size);
-        memcpy(now.data(), start, size);
-        data_.push_back(std::stoll(now));
+        data_.push_back(Data::ParseInteger<int8_t>(start , size));
     }
     void AppendFromString(std::string val) {
-        data_.push_back(std::stoi(val));
+        data_.push_back(Data::ParseInteger<int8_t>(val));
     }
     void Push_Back(int8_t value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , int8_t value) {
+        data_.assign(n , value);
     }
     int8_t* Data() noexcept {
         return data_.data();
@@ -374,13 +430,17 @@ private:
 
 class Int128Column : public Column {
 public:
+    using ValueType = __int128_t;
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
     ColumnType GetType() const override {
         return ColumnType::Int128;
     }
-    void Resize(size_t n) {
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return At(index);
+    }
+    void Resize(size_t n) override {
         data_.resize(n);
     }
     void AppendFromString(const char* start , size_t size) override {
@@ -394,6 +454,9 @@ public:
     }
     void Push_Back(__int128_t value) {
         data_.push_back(value);
+    }
+    void Assign(size_t n , __int128_t value) {
+        data_.assign(n , value);
     }
     __int128_t* Data() noexcept {
         return data_.data();
@@ -423,19 +486,32 @@ private:
     std::vector<__int128_t> data_;
 };
 
-class DateColumn : public Int64Column {
+class DateColumn : public Column {
 public:
+    using ValueType = int64_t;
+    void Reserve(size_t n) override {
+        data_.reserve(n);
+    }
+    void Resize(size_t n) override {
+        data_.resize(n);
+    }
     ColumnType GetType() const override {
         return ColumnType::Date;
     }
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return At(index);
+    }
     void AppendFromString(const char* start , size_t size) override {
-        std::string now;
-        now.resize(size);
-        memcpy(now.data(), start, size);
-        data_.push_back(Data::ParseDate(now));
+        data_.push_back(Data::ParseDate(start , size));
     }
     void AppendFromString(std::string val) {
         data_.push_back(Data::ParseDate(val));
+    }
+    void Push_Back(int64_t value) {
+        data_.push_back(value);
+    }
+    void Assign(size_t n , int64_t value) {
+        data_.assign(n , value);
     }
     int64_t* Data() noexcept {
         return data_.data();
@@ -465,10 +541,20 @@ private:
     std::vector<int64_t> data_;
 };
 
-class TimeStampColumn : public Int64Column {
+class TimeStampColumn : public Column {
 public:
+    using ValueType = int64_t;
+    void Reserve(size_t n) override {
+        data_.reserve(n);
+    }
+    void Resize(size_t n) override {
+        data_.resize(n);
+    }
     ColumnType GetType() const override {
-        return ColumnType::Date;
+        return ColumnType::Timestamp;
+    }
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        return At(index);
     }
     void AppendFromString(const char* start , size_t size) override {
         std::string now;
@@ -479,6 +565,12 @@ public:
     void AppendFromString(std::string val) {
         data_.push_back(Data::ParseTimestamp(val));
     }
+    void Push_Back(int64_t value) {
+        data_.push_back(value);
+    }
+    void Assign(size_t n , int64_t value) {
+        data_.assign(n , value);
+    }
     int64_t* Data() noexcept {
         return data_.data();
     }
@@ -507,7 +599,7 @@ private:
     std::vector<int64_t> data_;
 };
 
-static std::shared_ptr<Column> MakeColumn(ColumnType type) {
+inline std::shared_ptr<Column> MakeColumn(ColumnType type) {
     switch (type) {
         case ColumnType::Int8:
             return std::make_shared<Int8Column>();
@@ -533,12 +625,14 @@ static std::shared_ptr<Column> MakeColumn(ColumnType type) {
     throw std::runtime_error("Unsupported output column type!");
 }
 
+
+
 template <typename T>
-std::shared_ptr<T> As(const std::shared_ptr<Column>& obj) {
+inline std::shared_ptr<T> As(const std::shared_ptr<Column>& obj) {
     return std::dynamic_pointer_cast<T>(obj);
 }
 
 template <typename T>
-bool Is(const std::shared_ptr<Column>& obj) {
+inline bool Is(const std::shared_ptr<Column>& obj) {
     return dynamic_cast<T*>(obj.get()) != nullptr;
 }

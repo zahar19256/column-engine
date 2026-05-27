@@ -1,6 +1,5 @@
 #include "Batch.h"
 #include "Column.h"
-#include "Types.h"
 #include "Row.h"
 #include "Scheme.h"
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
@@ -80,6 +79,10 @@ void Batch::SetMsk(boost::dynamic_bitset<>&& msk) {
     mask_ = std::move(msk);
 }
 
+void Batch::AddAlias(const std::string& current_name , const std::string& alias) {
+    scheme_.AddAlias(current_name, alias);
+}
+
 void Batch::ApplyMsk(const boost::dynamic_bitset<>& mask) {
     if (!has_mask_) {
         mask_ = mask;
@@ -87,6 +90,10 @@ void Batch::ApplyMsk(const boost::dynamic_bitset<>& mask) {
     } else {
         mask_ &= mask;
     }
+}
+
+void Batch::MergeBatches(Batch& result , Batch& new_data) {
+
 }
 
 std::shared_ptr<Column> Batch::GetColumn(size_t index) const {

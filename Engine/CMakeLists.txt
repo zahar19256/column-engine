@@ -23,17 +23,23 @@ add_subdirectory(
     "${CMAKE_CURRENT_BINARY_DIR}/FileBasicTools"
 )
 
+find_package(re2 CONFIG REQUIRED)
+
 add_library(Engine
-    Functions/Aggregation.cpp
     Execution/Executor.cpp
     Execution/Executor.h
     Functions/Filter.h
     Functions/Aggregation.h
     Functions/Expression.h
+    Functions/TopK.cpp
+    Functions/TopK.h
+    Helpers/AggrBuilder.cpp
     Helpers/AggrBuilder.h
     Helpers/ExprHelper.h
     Helpers/Helpers.h
     Helpers/PlanBuilder.h
+    Operators/ScalarOperators.cpp
+    Operators/ScalarOperators.h
     Planer/Base.h
 )
 
@@ -57,6 +63,7 @@ target_compile_options(Engine
 target_link_libraries(Engine
     PUBLIC
         file_tools
+        re2::re2
 )
 
 add_custom_target(Executor DEPENDS Engine)
@@ -71,6 +78,10 @@ add_executable(clickbench_q1
     ClickBenchQ1.cpp
 )
 
+add_executable(clickbench_runner
+    ClickBenchRunner.cpp
+)
+
 target_link_libraries(test_engine
     PRIVATE
         Engine
@@ -79,6 +90,11 @@ target_link_libraries(test_engine
 )
 
 target_link_libraries(clickbench_q1
+    PRIVATE
+        Engine
+)
+
+target_link_libraries(clickbench_runner
     PRIVATE
         Engine
 )

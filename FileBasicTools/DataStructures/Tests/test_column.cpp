@@ -12,14 +12,17 @@ TEST(Int64ColumnTest, BasicOperations) {
     
     // Проверка Reserve (просто что не падает)
     EXPECT_NO_THROW(col->Reserve(100));
+    EXPECT_EQ(col->Size(), 0);
+    col->Resize(3);
+    EXPECT_EQ(col->Size(), 3);
     
     // Добавление чисел напрямую
     col->Push_Back(42);
     col->Push_Back(-100);
     
-    EXPECT_EQ(col->Size(), 2);
-    EXPECT_EQ((*col)[0], 42);
-    EXPECT_EQ((*col)[1], -100);
+    EXPECT_EQ(col->Size(), 5);
+    EXPECT_EQ((*col)[3], 42);
+    EXPECT_EQ((*col)[4], -100);
 }
 
 TEST(Int64ColumnTest, AppendFromString) {
@@ -78,6 +81,8 @@ TEST(Int64ColumnTest, RawPointerAccess) {
 
 TEST(StringColumnTest, BasicOperations) {
     StringColumn col;
+    col.Reserve(100);
+    EXPECT_EQ(col.Size(), 0);
     
     std::string s = "lvalue";
     col.Push_Back(s);           // lvalue version
@@ -86,6 +91,18 @@ TEST(StringColumnTest, BasicOperations) {
     ASSERT_EQ(col.Size(), 2);
     EXPECT_EQ(col[0], "lvalue");
     EXPECT_EQ(col[1], "rvalue");
+}
+
+TEST(StringColumnTest, ResizeStorageForRawRead) {
+    StringColumn col;
+
+    col.ResizeData(5);
+    memcpy(col.GetDataPointer() , "hello" , 5);
+    col.ResizeOffset(1);
+    col.GetOffsetPointer()[0] = 5;
+
+    ASSERT_EQ(col.Size(), 1);
+    EXPECT_EQ(col[0], "hello");
 }
 
 TEST(StringColumnTest, AppendFromString) {
@@ -155,4 +172,21 @@ TEST(ColumnUtilsTest, Polymorphism) {
     // Проверяем результат через каст (так как оператор [] не виртуальный)
     EXPECT_EQ((*As<Int64Column>(columns[0]))[0], 100);
     EXPECT_EQ((*As<StringColumn>(columns[1]))[0], "text");
+}
+
+TEST(ColumnUtilsTest, GetScalarValue) {
+    std::shared_ptr<Column> int16_col = std::make_shared<Int16Column>();
+    std::shared_ptr<Column> string_col = std::make_shared<StringColumn>();
+    std::shared_ptr<Column> double_col = std::make_shared<DoubleColumn>();
+    std::shared_ptr<Column> int128_col = std::make_shared<Int128Column>();
+
+    As<Int16Column>(int16_col)->Push_Back(42);
+    As<StringColumn>(string_col)->Push_Back("key");
+    As<DoubleColumn>(double_col)->Push_Back(3.5);
+    As<Int128Column>(int128_col)->Push_Back(static_cast<__int128_t>(1) << 80);
+
+    EXPECT_EQ(std::get<int64_t>(int16_col->GetScalarValue(0)), 42);
+    EXPECT_EQ(std::get<std::string>(string_col->GetScalarValue(0)), "key");
+    EXPECT_DOUBLE_EQ(std::get<double>(double_col->GetScalarValue(0)), 3.5);
+    EXPECT_EQ(std::get<__int128_t>(int128_col->GetScalarValue(0)), static_cast<__int128_t>(1) << 80);
 }

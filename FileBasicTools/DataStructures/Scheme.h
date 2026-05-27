@@ -38,11 +38,14 @@ class Scheme {
 public:
     void Push_Back(const SchemeNode& value);
     void Push_Back(SchemeNode&& value);
+    void AddAlias(const std::string& current_name , const std::string& alias);
+
     const SchemeNode* GetData() const;
     const std::string& GetName(size_t index) const;
     size_t GetIndex(const std::string& column_name) const;
     ColumnType GetType(size_t index) const;
     const SchemeNode& GetInfo(size_t index) const;
+
     size_t Size() const;
     void Clear();
 private:

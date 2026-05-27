@@ -12,7 +12,9 @@ class Int8Column;
 class Int16Column;
 class Int32Column;
 class Int64Column;
+class Int128Column;
 class StringColumn;
+class DoubleColumn;
 
 namespace Data {
     using FilterValue = std::variant<int64_t , double , std::string>;
@@ -45,13 +47,25 @@ namespace Data {
     };
 
     template <>
+    struct ColumnTraits<__int128_t> {
+        using ColumnT = Int128Column;
+        static constexpr ColumnType type = ColumnType::Int128;
+    };
+
+    template <>
+    struct ColumnTraits<double> {
+        using ColumnT = DoubleColumn;
+        static constexpr ColumnType type = ColumnType::Double;
+    };
+
+    template <>
     struct ColumnTraits<std::string> {
         using ColumnT = StringColumn;
         static constexpr ColumnType type = ColumnType::String;
     };
 
     template <typename T>
-    ColumnType GetColumnType() {
+    inline ColumnType GetColumnType() {
         if constexpr (std::is_same_v<T, int8_t>) {
             return ColumnType::Int8;
         }
@@ -73,13 +87,26 @@ namespace Data {
         return ColumnType::Unknown;
     }
 
-    inline int64_t ParseInt64(const std::string& val) {
-        int64_t result = 0;
-        auto [ptr , err] = std::from_chars(val.data(), val.data() + val.size(), result);
-        if (err != std::errc() || ptr != val.data() + val.size()) {
-            throw std::runtime_error("Cannot parse int64 from string!");
+    template <typename T>
+    inline T ParseInteger(const char* start , size_t size) {
+        T result = 0;
+        const char* end = start + size;
+        auto [ptr , err] = std::from_chars(start , end , result);
+        if (err == std::errc::invalid_argument || ptr != end) {
+            throw std::invalid_argument("Can't parse integer from string!");
+        }
+        if (err == std::errc::result_out_of_range) {
+            throw std::out_of_range("Integer value is out of range!");
+        }
+        if (err != std::errc()) {
+            throw std::runtime_error("Unknown integer parse error!");
         }
         return result;
+    }
+
+    template <typename T>
+    inline T ParseInteger(const std::string& value) {
+        return ParseInteger<T>(value.data() , value.size());
     }
 
     inline double ParseDouble(const std::string& val) {
@@ -152,7 +179,7 @@ namespace Data {
     }
 
     template <typename T> 
-    T ConvertDataFromString(const std::string& val) {
+    inline T ConvertDataFromString(const std::string& val) {
         if constexpr (std::is_same_v<T , std::string>) {
             return val;
         }
@@ -160,7 +187,7 @@ namespace Data {
             return ParseDouble(val);
         }
         if constexpr (std::is_integral_v<T>) {
-            return static_cast<T>(ParseInt64(val));
+            return static_cast<T>(ParseInteger<T>(val));
         }
         throw std::runtime_error("Unsupported type for conversion from string");
     }
@@ -168,10 +195,13 @@ namespace Data {
     inline FilterValue ConvertFilterValue(ColumnType type , const std::string& val) {
         switch (type) {
             case ColumnType::Int8:
+                return ParseInteger<int8_t>(val);
             case ColumnType::Int16:
+                return ParseInteger<int16_t>(val);
             case ColumnType::Int32:
+                return ParseInteger<int32_t>(val);
             case ColumnType::Int64:
-                return ParseInt64(val);
+                return ParseInteger<int64_t>(val);
             case ColumnType::Int128:
                 throw std::runtime_error("Int128 filter values are not supported yet!");
             case ColumnType::Double:
@@ -188,4 +218,4 @@ namespace Data {
         throw std::runtime_error("Unsupported type for filter value!");
     }
 
-}
+} // namespace Data

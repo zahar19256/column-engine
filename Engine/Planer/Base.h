@@ -6,8 +6,18 @@
 #include <cstddef>
 #include "../Functions/Expression.h"
 #include "../Functions/Aggregation.h"
+#include "../Functions/TopK.h"
 
 namespace LogicPlaner {
+
+    enum class QueryType {
+        ScanNode = 0,
+        FilterNode,
+        AggregationNode,
+        OrderByNode,
+        LimitNode,
+        OutputNode
+    };
     struct QueryNode {
         virtual ~QueryNode() = default;
         virtual const std::vector<std::string>& ColumnNames() const {
@@ -36,20 +46,27 @@ namespace LogicPlaner {
     struct FilterNode : QueryNode {
         std::shared_ptr<PredicateExpr> predicates_;
     };
-    struct ProjectionNode : QueryNode {
-        std::vector<std::shared_ptr<Expr>> projections_;
-    };
     struct AggregateNode : QueryNode {
         std::vector<std::shared_ptr<ScalarExpr>> group_by_;
         std::vector<Aggregation::AggregationCall> aggregates_;
     };
+    struct ProjectionNode : QueryNode {
+        std::vector<std::string> need_columns_;
+        std::vector<std::string> new_names_;
+    };
     struct OrderByNode : QueryNode {
-        // std::vector<OrderBy> order_by_; TODO придумать чё тут и как делать 
+        std::vector<std::shared_ptr<ScalarExpr>> order_by_;
+        std::vector<SortDirection> directions_;
+        size_t limit_ = 0;
+        bool has_limit_ = false;
+    };
+    struct HavingNode : FilterNode {
     };
     struct LimitNode : QueryNode {
         size_t limit_;
+        size_t offset_ = 0;
     };
     struct OutputNode : QueryNode {
         size_t query_index_ = 0;
     };
-}
+} // namespace LogicPlaner

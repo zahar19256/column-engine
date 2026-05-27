@@ -29,6 +29,26 @@ inline std::unique_ptr<PredicateExpr> MakeFilter(FilterCommandElement command) {
     return std::make_unique<FilterExpr>(std::move(command.name) , std::move(command.value) , command.type);
 }
 
+inline std::shared_ptr<ScalarExpr> MakeColumnExpr(std::string column_name , ColumnType type = ColumnType::Unknown) {
+    return std::make_shared<ColumnExpr>(std::move(column_name) , type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeLiteralExpr(Utility::ScalarValue value , ColumnType type = ColumnType::Unknown) {
+    return std::make_shared<LiteralExpr>(std::move(value) , type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeUnaryExpr(std::shared_ptr<ScalarExpr> expression , UnaryExprType type) {
+    return std::make_shared<UnaryExpr>(std::move(expression) , type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeLengthExpr(std::shared_ptr<ScalarExpr> expression) {
+    return MakeUnaryExpr(std::move(expression) , UnaryExprType::Length);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeExtractMinuteExpr(std::shared_ptr<ScalarExpr> expression) {
+    return MakeUnaryExpr(std::move(expression) , UnaryExprType::ExtractMinute);
+}
+
 inline std::unique_ptr<PredicateExpr> MakePredicate(const std::vector<PredicateCommandElement>& tree , size_t& pos) {
     if (pos >= tree.size()) {
         throw std::runtime_error("Predicate tree size not matching!");

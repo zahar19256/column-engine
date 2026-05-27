@@ -1,35 +1,18 @@
 #pragma once
 #include "../../FileBasicTools/src/BelZReader.h"
+#include "../../FileBasicTools/DataStructures/Utility.h"
 #include "../Functions/Aggregation.h"
 #include "../Functions/Expression.h"
-#include "../Helpers/Helpers.h"
-#include <functional>
+#include "../Functions/TopK.h"
+#include "../Helpers/AggrBuilder.h"
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
-#include <unordered_map>
+#include <absl/container/flat_hash_map.h>
 #include <utility>
-#include <variant>
 #include <vector>
 
 using AggrState = std::vector<std::unique_ptr<Aggregation::AggregationState>>;
-using GroupKey = std::vector<ScalarValue>;
-
-struct HashGroupKey {
-    size_t operator()(const GroupKey& key) const {
-        size_t result = 0;
-        for (const auto& value : key) {
-            const size_t current = std::visit(
-                [](const auto& item) {
-                    return std::hash<std::decay_t<decltype(item)>>{}(item);
-                },
-                value);
-            result ^= current + 0x9e3779b9 + (result << 6) + (result >> 2);
-        }
-        return result;
-    }
-};
 
 class Executor {
 public:
@@ -90,7 +73,7 @@ protected:
         result.reserve(calls_.size());
 
         for (const auto& call : calls_) {
-            result.push_back(Aggregation::MakeAggregationState(call));
+            result.push_back(MakeAggregationState(call));
         }
 
         return result;
@@ -115,8 +98,9 @@ public:
         }
         Batch input;
         while (child->Next(input)) {
-            for (auto& state : states_) {
-                state->UpdateBatch(input);
+            for (size_t i = 0; i < states_.size(); ++i) {
+                const std::shared_ptr<Column> column = calls_[i].expression ? calls_[i].expression->EvalBatch(input) : nullptr;
+                states_[i]->UpdateBatch(column.get() , input.GetRows() , input.GetMsk());
             }
         }
         OutputBatch(data);
@@ -131,16 +115,94 @@ private:
     std::vector<std::unique_ptr<Aggregation::AggregationState>> states_;
 };
 
-class AggregationExecutor : public GlobalAggregationExecutor {
+class GroupByAggregationExecutor : public AggregationExecutorBase {
 public:
-    explicit AggregationExecutor(Aggregation::AggregationCall call)
-        : GlobalAggregationExecutor(std::vector<Aggregation::AggregationCall>{std::move(call)}) {
+    explicit GroupByAggregationExecutor(std::vector<std::shared_ptr<ScalarExpr>> group_by,
+          std::vector<Aggregation::AggregationCall> calls)
+        : AggregationExecutorBase(std::move(calls)), group_by_(std::move(group_by)) {
     }
+    bool Next(Batch& data) override;
+private:
+    std::string DefaultGroupByOutputName(const std::shared_ptr<ScalarExpr>& expr , size_t index) const;
+    std::string DefaultOutputName(const Aggregation::AggregationCall& call , size_t index) const;
+    ColumnType GroupByOutputType(size_t index) const;
+    ColumnType AggregationOutputType(size_t index) const;
+    void OutputBatch(Batch& out) const;
+
+    std::vector<std::shared_ptr<ScalarExpr>> group_by_;
+    absl::flat_hash_map <Utility::GroupKey , AggrState , Utility::GroupHash> storage_;
+    bool finished_ = false;
 };
 
-class GroupByAggregationExecutor : public AggregationExecutorBase {
+class ProjectionExecutor : public Executor {
+public:
+    explicit ProjectionExecutor(
+        std::vector<std::string> need_columns,
+        std::vector<std::pair<std::string , std::string>> alias = {})
+        : need_columns_(std::move(need_columns)), alias_(std::move(alias)) {
+        need_indexes_.resize(need_columns_.size());
+    }
+
+    bool Next(Batch& data) override {
+        if (!child) {
+            throw std::runtime_error("No child in Projection executor!");
+        }
+        if (!child->Next(data)) {
+            return false;
+        }
+        Batch result;
+        Scheme scheme;
+        for (size_t i = 0; i < need_columns_.size(); ++i) {
+            if (need_indexes_[i] == std::nullopt) {
+                need_indexes_[i] = data.GetScheme().GetIndex(need_columns_[i]);
+            }
+            result.AddColumn(data.GetColumn(need_indexes_[i].value()));
+            scheme.Push_Back(data.GetScheme().GetInfo(need_indexes_[i].value()));
+        }
+        result.SetScheme(scheme);
+        result.SetMsk(data.GetMsk());
+        for (size_t index = 0; index < alias_.size(); ++index) {
+            result.AddAlias(alias_[index].first , alias_[index].second);
+        }
+        std::swap(result , data);
+        return true;
+    }
 private:
+    std::vector <std::string> need_columns_;
+    std::vector <std::optional<size_t>> need_indexes_;
+    std::vector<std::pair<std::string , std::string>> alias_;
+};
+
+
+class OrderByExecutor : public Executor {
+public:
+    explicit OrderByExecutor(
+        std::vector<std::shared_ptr<ScalarExpr>> order_expr ,
+        size_t limit ,
+        std::vector<SortDirection> directions = {})
+        : order_expr_(std::move(order_expr)) ,
+          directions_(std::move(directions)) ,
+          limit_(limit) {
+    }
+    bool Next(Batch& data) override;
+private:
+    std::vector<std::shared_ptr<ScalarExpr>> order_expr_;
+    std::vector<SortDirection> directions_;
+    bool finished_ = false;
+    size_t limit_;
+};
+
+class LimitExecutor : public Executor {
+public:
+    explicit LimitExecutor(size_t limit , size_t offset = 0) : limit_(limit) , offset_(offset) {
+    }
+    bool Next(Batch& data) override;
+private:
+    std::shared_ptr<Column> SliceColumn(std::shared_ptr<Column> column , size_t del , bool front = true);
+    size_t limit_;
+    size_t offset_ = 0;
+    size_t skipped_ = 0;
+    size_t gived_ = 0;
+    Batch result_;
     
-    std::vector<std::shared_ptr<ScalarExpr>> group_by_;
-    std::unordered_map <GroupKey , AggrState , HashGroupKey> data_;
 };

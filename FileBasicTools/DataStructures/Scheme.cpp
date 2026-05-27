@@ -42,6 +42,10 @@ void Scheme::Push_Back(SchemeNode&& value) {
     columns_.push_back(std::move(value));
 }
 
+void Scheme::AddAlias(const std::string& current_name , const std::string& alias) {
+    columns_id_[alias] = columns_id_[current_name];
+}
+
 const SchemeNode* Scheme::GetData() const {
     return columns_.data();
 }

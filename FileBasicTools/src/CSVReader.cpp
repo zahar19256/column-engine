@@ -6,7 +6,6 @@
 #include <iostream>
 
 CSVReader::CSVReader(const std::string& filePath , size_t bucket_size) : filePath_(filePath) , bucket_size_(bucket_size) {
-    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
     stream_.open(filePath_ , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading: " + filePath);

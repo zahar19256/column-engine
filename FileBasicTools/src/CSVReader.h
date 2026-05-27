@@ -8,7 +8,7 @@
 #include "Batch.h"
 
 static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 8;
-static size_t STANDART_ROWS_COUNT = 1024;
+static size_t STANDART_ROWS_COUNT = 8192;
 
 class CSVReader {
 public:
@@ -65,7 +65,6 @@ public:
     }
 
 private:
-    static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;
     enum class CURSOR_STATE {
         IN_QUOTE,
         NOT_IN_QUOTE,
@@ -74,6 +73,5 @@ private:
     size_t bucket_size_;
     bool initial_chunk_ = true;
     StringBacket data_;
-    std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
     std::ifstream stream_;
 };

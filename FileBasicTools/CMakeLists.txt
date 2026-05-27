@@ -76,6 +76,7 @@ if(FILE_BASIC_TOOLS_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_CSVConvertor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_BelZConvertor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_BelZConvertorAdvanced.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_HitsRoundTrip.cpp
     )
 
     add_executable(test_bench

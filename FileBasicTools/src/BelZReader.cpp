@@ -3,6 +3,7 @@
 #include "MetaData.h"
 #include "Scheme.h"
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -10,7 +11,6 @@ BelZReader::BelZReader(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
         throw std::runtime_error("File not found: " + filePath);
     }
-    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
     stream_.open(filePath , std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading in BelZReader constructor: " + filePath);
@@ -20,16 +20,6 @@ BelZReader::BelZReader(const std::string& filePath) {
 
 bool BelZReader::Empty() const {
     return batches_left_ == 0;
-}
-
-std::shared_ptr<Column> BelZReader::ReadInt64Column(size_t size) {
-    auto result = std::make_shared<Int64Column>();
-    if (size > 0) {
-        result->Resize(size);
-        stream_.read(reinterpret_cast<char*>(result->Data()), size * sizeof(int64_t));
-        if (!stream_) throw std::runtime_error("Failed to read Int64 block");
-    }
-    return result;
 }
 
 std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
@@ -44,25 +34,52 @@ std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
     if (offset_sz != size) {
         throw std::runtime_error("StringColumn size mismatch: expected " + std::to_string(size) + ", got " + std::to_string(offset_sz));
     }
-    result->Reserve(data_sz);
-    result->ReserveOffset(offset_sz);
+    result->ResizeData(data_sz);
+    result->ResizeOffset(offset_sz);
     stream_.read((result->GetDataPointer()) , data_sz);
 
     stream_.read(reinterpret_cast<char*>(result->GetOffsetPointer()) , offset_sz * sizeof(size_t));
     return result;
 }
 
+std::shared_ptr<Column> BelZReader::ReadDoubleColumn(size_t size) {
+    return ReadFixedWidthColumn<double , DoubleColumn>(size);
+}
+
+std::shared_ptr<Column> BelZReader::ReadDateColumn(size_t size) {
+    return ReadFixedWidthColumn<int64_t , DateColumn>(size);
+}
+
+std::shared_ptr<Column> BelZReader::ReadTimestampColumn(size_t size) {
+    return ReadFixedWidthColumn<int64_t , TimeStampColumn>(size);
+}
+
 std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , ssize_t need_offset) {
     if (need_offset != -1) {
         stream_.seekg(need_offset);  
     }
-    if (type == ColumnType::Int64) {
-        return ReadInt64Column(size);
+    switch(type) {
+        case ColumnType::Int8:
+            return ReadIntergerColumn<int8_t>(size);
+        case ColumnType::Int16:
+            return ReadIntergerColumn<int16_t>(size);
+        case ColumnType::Int32:
+            return ReadIntergerColumn<int32_t>(size);
+        case ColumnType::Date:
+            return ReadDateColumn(size);
+        case ColumnType::Timestamp:
+            return ReadTimestampColumn(size);
+        case ColumnType::Int64:
+            return ReadIntergerColumn<int64_t>(size);
+        case ColumnType::Int128:
+            return ReadIntergerColumn<__int128_t>(size);
+        case ColumnType::String:
+            return ReadStringColumn(size);
+        case ColumnType::Double:
+            return ReadDoubleColumn(size);
+        default:
+            throw std::runtime_error("Try to read from .belz unknown ColumnType:" + std::to_string(static_cast<int8_t>(type)));
     }
-    if (type == ColumnType::String) {
-        return ReadStringColumn(size);
-    }
-    throw std::runtime_error("Try to read from .belz unknown ColumnType:" + std::to_string(static_cast<int8_t>(type)));
 }
 
 void BelZReader::ReadMetaData() {
@@ -73,6 +90,7 @@ void BelZReader::ReadMetaData() {
     size_t col_count;
     stream_.read(reinterpret_cast<char*>(&col_count) , sizeof(col_count));
     scheme_.Clear(); 
+    meta_.Clear();
     for (size_t i = 0; i < col_count; ++i) {
         size_t len;
         stream_.read(reinterpret_cast<char*>(&len) , sizeof(len));
@@ -85,6 +103,7 @@ void BelZReader::ReadMetaData() {
         stream_.read(reinterpret_cast<char*>(&type) , sizeof(type));
         scheme_.Push_Back(SchemeNode{name, static_cast<ColumnType>(type)});
     }
+    meta_.SetScheme(Scheme(scheme_));
     stream_.read(reinterpret_cast<char*>(&batches_left_) , sizeof(batches_left_));
     for (size_t i = 0; i < batches_left_; ++i) {
         size_t offset;

@@ -29,7 +29,6 @@ BelZWriter::BelZWriter(const std::string& CSVFilePath) {
     std::filesystem::path src_path(CSVFilePath);
     std::filesystem::path dest_path = src_path;
     dest_path.replace_extension(".belZ");
-    fout_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
     fout_.open(dest_path , std::ios::binary | std::ios::out);
     buf_.resize(STANDART_BUCKET_SIZE * 2);
     if (!fout_.is_open()) {
@@ -47,8 +46,28 @@ void BelZWriter::Append(const char* data , size_t size , ColumnType type) {
         AppendString(data , size);
         return;
     }
+    if (type == ColumnType::Int8) {
+        AppendNumber<int8_t>(data , size);
+        //std::cerr << "APINT " << buf_ << std::endl;
+        return;
+    }
+    if (type == ColumnType::Int16) {
+        AppendNumber<int16_t>(data , size);
+        //std::cerr << "APINT " << buf_ << std::endl;
+        return;
+    }
+    if (type == ColumnType::Int32) {
+        AppendNumber<int32_t>(data , size);
+        //std::cerr << "APINT " << buf_ << std::endl;
+        return;
+    }
     if (type == ColumnType::Int64) {
-        AppendInt64(data , size);
+        AppendNumber<int64_t>(data , size);
+        //std::cerr << "APINT " << buf_ << std::endl;
+        return;
+    }
+    if (type == ColumnType::Double) {
+        AppendNumber<double>(data , size);
         //std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
@@ -56,36 +75,67 @@ void BelZWriter::Append(const char* data , size_t size , ColumnType type) {
 }
 
 void BelZWriter::AppendColumn(std::shared_ptr<Column> column , ColumnType type) {
-    if (type == ColumnType::Int64) {
-        size_t sz = As<Int64Column>(column)->Size();
-        EnsureCapacity(sizeof(int64_t) * sz);
-        memcpy(buf_.data() + offset_ , As<Int64Column>(column)->Data() , sizeof(int64_t) * sz);
-        offset_ += sizeof(int64_t) * sz;
-        return;
-    }
-    if (type == ColumnType::String) {
-        size_t data_sz = As<StringColumn>(column)->GetDataSize();
-        size_t offset_sz = As<StringColumn>(column)->Size();
-        EnsureCapacity(offset_sz * sizeof(size_t) + data_sz + 2 * sizeof(size_t));
-        memcpy(buf_.data() + offset_ , &data_sz , sizeof(data_sz));
-        offset_ += sizeof(data_sz);
-        memcpy(buf_.data() + offset_ , &offset_sz , sizeof(offset_sz));
-        offset_ += sizeof(offset_sz);
-        memcpy(buf_.data() + offset_ , As<StringColumn>(column)->GetDataPointer() , data_sz);
-        offset_ += data_sz;
-        memcpy(buf_.data() + offset_ , As<StringColumn>(column)->GetOffsetPointer() , offset_sz * sizeof(size_t));
-        offset_ += offset_sz * sizeof(size_t);
-        return;
-    }
-    throw std::runtime_error("Try to write in Belz unknown type of Column!");
-}
+    auto append_fixed_width = [this, &column]<typename ColumnT, typename ValueT>() {
+        auto typed_column = As<ColumnT>(column);
+        if (!typed_column) {
+            throw std::runtime_error("Column type mismatch in BelZWriter::AppendColumn!");
+        }
 
-inline void BelZWriter::AppendInt64(const char* data , size_t size) {
-    int64_t val = 0;
-    std::from_chars(data , data + size , val);
-    EnsureCapacity(sizeof(val));
-    memcpy(buf_.data() + offset_ , reinterpret_cast<char*>(&val) , sizeof(val));
-    offset_ += sizeof(val);
+        const size_t sz = typed_column->Size();
+        const size_t bytes = sizeof(ValueT) * sz;
+        EnsureCapacity(bytes);
+        if (bytes != 0) {
+            memcpy(buf_.data() + offset_ , typed_column->Data() , bytes);
+            offset_ += bytes;
+        }
+    };
+
+    switch(type) {
+        case ColumnType::Int8:
+            append_fixed_width.template operator()<Int8Column, int8_t>();
+            return;
+        case ColumnType::Int16:
+            append_fixed_width.template operator()<Int16Column, int16_t>();
+            return;
+        case ColumnType::Int32:
+            append_fixed_width.template operator()<Int32Column, int32_t>();
+            return;
+        case ColumnType::Int64:
+            append_fixed_width.template operator()<Int64Column, int64_t>();
+            return;
+        case ColumnType::Int128:
+            append_fixed_width.template operator()<Int128Column, __int128_t>();
+            return;
+        case ColumnType::Double:
+            append_fixed_width.template operator()<DoubleColumn, double>();
+            return;
+        case ColumnType::Date:
+            append_fixed_width.template operator()<DateColumn, int64_t>();
+            return;
+        case ColumnType::Timestamp:
+            append_fixed_width.template operator()<TimeStampColumn, int64_t>();
+            return;
+        case ColumnType::String: {
+            auto string_column = As<StringColumn>(column);
+            if (!string_column) {
+                throw std::runtime_error("Column type mismatch in BelZWriter::AppendColumn!");
+            }
+            size_t data_sz = string_column->GetDataSize();
+            size_t offset_sz = string_column->Size();
+            EnsureCapacity(offset_sz * sizeof(size_t) + data_sz + 2 * sizeof(size_t));
+            memcpy(buf_.data() + offset_ , &data_sz , sizeof(data_sz));
+            offset_ += sizeof(data_sz);
+            memcpy(buf_.data() + offset_ , &offset_sz , sizeof(offset_sz));
+            offset_ += sizeof(offset_sz);
+            memcpy(buf_.data() + offset_ , string_column->GetDataPointer() , data_sz);
+            offset_ += data_sz;
+            memcpy(buf_.data() + offset_ , string_column->GetOffsetPointer() , offset_sz * sizeof(size_t));
+            offset_ += offset_sz * sizeof(size_t);
+            return;
+        }
+        default:
+            throw std::runtime_error("Try to write in Belz unknown type of Column!");
+    }
 }
 
 inline void BelZWriter::AppendString(const char* data , size_t size) {
@@ -94,30 +144,6 @@ inline void BelZWriter::AppendString(const char* data , size_t size) {
     offset_ += sizeof(size);
     memcpy(buf_.data() + offset_ , data , size);
     offset_ += size;
-}
-
-
-void BelZWriter::WriteData(const char* data , size_t size , ColumnType type) {
-    if (type == ColumnType::Int64) {
-        WriteInt64(data , size);
-        return;
-    }
-    if (type == ColumnType::String) {
-        WriteString(data , size);
-        return;
-    }
-    throw std::runtime_error("Try to Write to BelZFormat unknown type: " + std::to_string(uint8_t(type)));
-}
-
-void BelZWriter::WriteInt64(const char* data , size_t size) {
-    int64_t val = 0;
-    std::from_chars(data , data + size , val);
-    fout_.write(reinterpret_cast<char*>(&val) , sizeof(val));
-}
-
-void BelZWriter::WriteString(const char* data , size_t size) {
-    fout_.write(reinterpret_cast<char*>(&size) , sizeof(size));
-    fout_.write(data , size);
 }
 
 void BelZWriter::WriteScheme(const Scheme& scheme_) {

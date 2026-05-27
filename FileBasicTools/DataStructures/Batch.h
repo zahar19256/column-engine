@@ -22,6 +22,8 @@ public:
     void ApplyMsk(const boost::dynamic_bitset<>& msk);
     void AddColumn(std::shared_ptr<Column> column);
     void AddRowFromCSV(const StringBacket& val);
+    void AddAlias(const std::string& current_name , const std::string& alias);
+    void MergeBatches(Batch& result , Batch& new_data);
 
     ColumnType GetType(size_t index) const;
     const Scheme& GetScheme() const;

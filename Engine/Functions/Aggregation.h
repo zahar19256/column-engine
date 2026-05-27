@@ -1,8 +1,9 @@
 #pragma once
-#include "../../FileBasicTools/DataStructures/Column.h"
 #include "../../FileBasicTools/DataStructures/Batch.h"
+#include "../../FileBasicTools/DataStructures/Column.h"
 #include "../../FileBasicTools/DataStructures/Types.h"
-#include "../Operators/BasicOperators.h"
+#include "../Functions/Expression.h"
+#include "../Operators/AggrOperators.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -22,7 +23,7 @@ namespace Aggregation {
 
     struct AggregationCall {
         AggregationType type;
-        std::optional<std::string> column_name;
+        std::shared_ptr<ScalarExpr> expression;
         std::optional<std::string> new_name;
         ColumnType input_type = ColumnType::Unknown;
         ColumnType output_type = ColumnType::Unknown;
@@ -31,26 +32,28 @@ namespace Aggregation {
     class AggregationState {
     public:
         virtual ~AggregationState() = default;
-        virtual void UpdateBatch(const Batch& data) = 0;
-        virtual void UpdateRow(const Batch& data , size_t index_row) = 0;
+        virtual void UpdateBatch(const Column* column , size_t rows , const boost::dynamic_bitset<>& mask) = 0;
+        virtual void UpdateRow(const Column* column , size_t index_row) = 0;
         virtual void AppendResult(Column& out) const = 0;
         virtual ColumnType FinalType() const = 0;
     };
 
-    template <typename T , template <typename> typename OperatorT>
+    template <
+        typename ValueT,
+        typename InputColumnT,
+        typename OutputColumnT,
+        template <typename> typename OperatorT>
     class TypedAggregationState : public AggregationState {
     public:
-        explicit TypedAggregationState(std::string column_name)
-            : column_name_(std::move(column_name)), state_(Operator::Init()) {
+        explicit TypedAggregationState()
+            : state_(Operator::Init()) {
         }
 
-        void UpdateBatch(const Batch& data) override {
-            using ColumnT = typename Data::ColumnTraits<T>::ColumnT;
-            const auto& column = As<ColumnT>(data.GetColumn(column_name_));
+        void UpdateBatch(const Column* input , size_t rows , const boost::dynamic_bitset<>& mask) override {
+            const auto& column = dynamic_cast<const InputColumnT*>(input);
             if (!column) {
                 throw std::runtime_error("Aggregation column type mismatch!");
             }
-            const auto& mask = data.GetMsk();
             if (mask.empty() || mask.count() == mask.size()) {
                 Operator::UpdateFull(state_, column);
             } else {
@@ -58,9 +61,11 @@ namespace Aggregation {
             }
         }
 
-        void UpdateRow(const Batch& data , size_t index_row) override {
-            using ColumnT = typename Data::ColumnTraits<T>::ColumnT;
-            const auto& column = As<ColumnT>(data.GetColumn(column_name_));
+        void UpdateRow(const Column* input , size_t index_row) override {
+            if (input == nullptr) {
+                throw std::runtime_error("Aggregation requires input expression!");
+            }
+            const auto& column = dynamic_cast<const InputColumnT*>(input);
             if (!column) {
                 throw std::runtime_error("Aggregation column type mismatch!");
             }
@@ -68,8 +73,7 @@ namespace Aggregation {
         }
 
         void AppendResult(Column& out) const override {
-            using OutColumnT = typename Data::ColumnTraits<typename Operator::ResultType>::ColumnT;
-            auto* result = dynamic_cast<OutColumnT*>(&out);
+            auto* result = dynamic_cast<OutputColumnT*>(&out);
             if (result == nullptr) {
                 throw std::runtime_error("Aggregation output column type mismatch!");
             }
@@ -77,25 +81,25 @@ namespace Aggregation {
         }
 
         ColumnType FinalType() const override {
-            return Operator::FinalType();
+            return OutputColumnT{}.GetType();
         }
 
     private:
-        using Operator = OperatorT<T>;
-        std::string column_name_;
+        using Operator = OperatorT<ValueT>;
         typename Operator::StateType state_;
     };
 
     class CountAggregationState : public AggregationState {
     public:
-        explicit CountAggregationState(std::optional<std::string> column_name)
-            : column_name_(std::move(column_name)), state_(CountOperator::Init()) {
+        explicit CountAggregationState(bool has_expression)
+            : has_expression_(has_expression), state_(CountOperator::Init()) {
         }
 
-        void UpdateBatch(const Batch& data) override {
-            const auto& mask = data.GetMsk();
-            if (column_name_.has_value()) {
-                auto column = data.GetColumn(*column_name_);
+        void UpdateBatch(const Column* column , size_t rows , const boost::dynamic_bitset<>& mask) override {
+            if (has_expression_) {
+                if (column == nullptr) {
+                    throw std::runtime_error("COUNT aggregation expression is null!");
+                }
                 if (mask.empty() || mask.count() == mask.size()) {
                     CountOperator::UpdateFull(state_, column);
                 } else {
@@ -103,19 +107,21 @@ namespace Aggregation {
                 }
                 return;
             }
-            if (!mask.empty() && mask.size() != data.GetRows()) {
+            if (!mask.empty() && mask.size() != rows) {
                 throw std::runtime_error("Count aggregation mask size mismatch!");
             }
-            state_ += mask.empty() ? data.GetRows() : mask.count();
+            state_ += mask.empty() ? rows : mask.count();
         }
 
-        void UpdateRow(const Batch& data , size_t index_row) override {
-            if (column_name_.has_value()) {
-                auto column = data.GetColumn(*column_name_);
+        void UpdateRow(const Column* column , size_t index_row) override {
+            if (has_expression_) {
+                if (column == nullptr) {
+                    throw std::runtime_error("COUNT aggregation expression is null!");
+                }
                 CountOperator::UpdateRow(state_, column, index_row);
                 return;
             }
-            (void)data;
+            (void)column;
             (void)index_row;
             ++state_;
         }
@@ -133,9 +139,7 @@ namespace Aggregation {
         }
 
     private:
-        std::optional<std::string> column_name_;
+        bool has_expression_;
         CountOperator::StateType state_;
     };
-
-    std::unique_ptr<AggregationState> MakeAggregationState(const AggregationCall& call);
-}
+} // namespace Aggregation

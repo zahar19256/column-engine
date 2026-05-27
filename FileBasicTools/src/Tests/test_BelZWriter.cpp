@@ -47,17 +47,18 @@ TEST_F(BelZWriterTest, OffsetTracking) {
     
     EXPECT_EQ(writer.GetOffSet(), 0);
 
-    writer.WriteInt64(std::string("10").data() , 2); 
+    writer.Append(std::string("10").data() , 2 , ColumnType::Int64);
     EXPECT_EQ(writer.GetOffSet(), 8);
 
-    writer.WriteInt64(std::string("20").data() , 2);
+    writer.Append(std::string("20").data() , 2 , ColumnType::Int64);
     EXPECT_EQ(writer.GetOffSet(), 16);
 }
 
 TEST_F(BelZWriterTest, WriteInt64) {
     {
         BelZWriter writer(csvPath);
-        writer.WriteInt64(std::string("1234567890123").data() , 13); 
+        writer.Append(std::string("1234567890123").data() , 13 , ColumnType::Int64);
+        writer.Flush();
     }
 
     auto data = ReadBinaryFile(belzPath);
@@ -72,7 +73,8 @@ TEST_F(BelZWriterTest, WriteInt64) {
 TEST_F(BelZWriterTest, WriteInt64_Negative) {
     {
         BelZWriter writer(csvPath);
-        writer.WriteInt64(std::string("-500").data() , 4);
+        writer.Append(std::string("-500").data() , 4 , ColumnType::Int64);
+        writer.Flush();
     }
 
     auto data = ReadBinaryFile(belzPath);
@@ -89,9 +91,10 @@ TEST_F(BelZWriterTest, WriteString_WithLengthPrefix) {
 
     {
         BelZWriter writer(csvPath);
-        writer.WriteString(testStr.data() , testStr.size());
+        writer.Append(testStr.data() , testStr.size() , ColumnType::String);
 
         EXPECT_EQ(writer.GetOffSet(), sizeof(size_t) + expectedLen);
+        writer.Flush();
     }
 
     auto data = ReadBinaryFile(belzPath);
@@ -105,14 +108,15 @@ TEST_F(BelZWriterTest, WriteString_WithLengthPrefix) {
     EXPECT_EQ(readStr, testStr);
 }
 
-TEST_F(BelZWriterTest, WriteData_Dispatcher) {
+TEST_F(BelZWriterTest, Append_Dispatcher) {
     std::string intVal = "777";
     std::string strVal = "Text";
 
     {
         BelZWriter writer(csvPath);
-        writer.WriteData(intVal.data(), intVal.size(), ColumnType::Int64);
-        writer.WriteData(strVal.data(), strVal.size(), ColumnType::String);
+        writer.Append(intVal.data(), intVal.size(), ColumnType::Int64);
+        writer.Append(strVal.data(), strVal.size(), ColumnType::String);
+        writer.Flush();
     }
 
     auto data = ReadBinaryFile(belzPath);
@@ -145,7 +149,7 @@ TEST_F(BelZWriterTest, WriteMeta_Integration) {
 
     {
         BelZWriter writer(csvPath);
-        writer.WriteInt64(std::string("0").data() , 1); 
+        writer.Append(std::string("0").data() , 1 , ColumnType::Int64);
         writer.WriteMeta(meta);
         
         EXPECT_GT(writer.GetOffSet(), 8);

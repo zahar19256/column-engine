@@ -10,12 +10,18 @@ public:
     BelZWriter(const std::string& CSVFilePath);
     void EnsureCapacity(size_t add_size);
     uint64_t GetOffSet();
-    void WriteData(const char* data , size_t size , ColumnType type);
-    void WriteInt64(const char* data , size_t size);
-    void WriteString(const char* data , size_t size);
     void WriteScheme(const Scheme& scheme);
     void Append(const char* data , size_t size , ColumnType type);
-    inline void AppendInt64(const char* data , size_t size);
+    template <typename T>
+    inline void AppendNumber(const char* data , size_t size) {
+        T val = 0;
+        std::from_chars(data , data + size , val);
+        EnsureCapacity(sizeof(val));
+        memcpy(buf_.data() + offset_ , reinterpret_cast<char*>(&val) , sizeof(val));
+        offset_ += sizeof(val);
+    }
+
+
     inline void AppendString(const char* data , size_t size);
     void AppendColumn(std::shared_ptr<Column> column , ColumnType type);
     void Flush() {
@@ -40,8 +46,6 @@ public:
         fout_.write(reinterpret_cast<const char*>(&meta_start_offset) , sizeof(meta_start_offset));
     }
 private:
-    static constexpr size_t kStreamBufferSize = 512 * 1024 * 1024;
-    std::vector<char> stream_buffer_ = std::vector<char>(kStreamBufferSize);
     std::ofstream fout_;
     std::string buf_;
     size_t offset_ = 0;
