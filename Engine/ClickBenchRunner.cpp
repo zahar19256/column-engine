@@ -333,6 +333,7 @@ Batch MakeQuery7Result(const ClickBench::Query7Result& value) {
 struct BenchRun {
     size_t rows = 0;
     double query_ms = 0.0;
+    double read_ms = 0.0;
     double write_ms = 0.0;
 };
 
@@ -376,6 +377,7 @@ BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query , const std::file
         result.write_ms += std::chrono::duration<double , std::milli>(write_finish - write_start).count();
     }
     result.rows = writer.Rows();
+    result.read_ms = executor->ReadMillis();
     return result;
 }
 
@@ -581,6 +583,7 @@ struct QueryResult {
     bool ok = false;
     size_t rows = 0;
     double query_ms = 0.0;
+    double read_ms = 0.0;
     double write_ms = 0.0;
     double total_ms = 0.0;
     std::filesystem::path file;
@@ -593,7 +596,7 @@ void WriteSummary(const std::vector<QueryResult>& results , const std::filesyste
         throw std::runtime_error("Can't open summary file: " + path.string());
     }
 
-    out << "query,status,rows,query_ms,write_ms,total_ms,file,error\n";
+    out << "query,status,rows,query_ms,write_ms,total_ms,file,read_ms,error\n";
     for (const auto& result : results) {
         out << result.number << ','
             << (result.ok ? "ok" : "error") << ','
@@ -602,7 +605,7 @@ void WriteSummary(const std::vector<QueryResult>& results , const std::filesyste
             << result.write_ms << ','
             << result.total_ms << ',';
         WriteEscaped(out , result.file.string());
-        out << ',';
+        out << ',' << result.read_ms << ',';
         WriteEscaped(out , result.error);
         out << '\n';
     }
@@ -649,7 +652,7 @@ int main(int argc , char* argv[]) {
         const auto queries = MakeQueries(only_queries);
         results.reserve(queries.size());
 
-        std::cout << "query,status,rows,query_ms,write_ms,total_ms,file\n";
+        std::cout << "query,status,rows,query_ms,write_ms,total_ms,file,read_ms\n";
         for (const auto& query : queries) {
             QueryResult result;
             result.number = query.number;
@@ -661,6 +664,7 @@ int main(int argc , char* argv[]) {
                 const auto finish = std::chrono::steady_clock::now();
                 result.rows = bench_run.rows;
                 result.query_ms = bench_run.query_ms;
+                result.read_ms = bench_run.read_ms;
                 result.write_ms = bench_run.write_ms;
                 result.total_ms = std::chrono::duration<double , std::milli>(finish - start).count();
                 result.ok = true;
@@ -681,7 +685,8 @@ int main(int argc , char* argv[]) {
                       << std::fixed << std::setprecision(3) << result.query_ms << ','
                       << result.write_ms << ','
                       << result.total_ms << ','
-                      << result.file.string() << '\n';
+                      << result.file.string() << ','
+                      << result.read_ms << '\n';
             if (!result.ok) {
                 std::cerr << "q" << result.number << ": " << result.error << '\n';
             }

@@ -5,6 +5,7 @@
 #include "../Functions/Expression.h"
 #include "../Functions/TopK.h"
 #include "../Helpers/AggrBuilder.h"
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -18,6 +19,9 @@ class Executor {
 public:
     virtual ~Executor() = default;
     virtual bool Next(Batch& data) = 0;
+    virtual double ReadMillis() const {
+        return child ? child->ReadMillis() : 0.0;
+    }
     std::shared_ptr<Executor> child;
 };
 
@@ -30,13 +34,20 @@ public:
         if (reader_.Empty()) {
             return false;
         }
+        const auto start = std::chrono::steady_clock::now();
         reader_.ReadBatch(out , column_names_);
+        const auto finish = std::chrono::steady_clock::now();
+        read_ms_ += std::chrono::duration<double , std::milli>(finish - start).count();
         out.InitMsk();
         return true;
+    }
+    double ReadMillis() const override {
+        return read_ms_;
     }
 private:
     BelZReader reader_;
     std::vector<std::string> column_names_;
+    double read_ms_ = 0.0;
 };
 
 class FilterExecutor : public Executor {

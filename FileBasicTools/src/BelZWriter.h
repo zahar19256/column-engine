@@ -8,6 +8,7 @@
 class BelZWriter {
 public:
     BelZWriter(const std::string& CSVFilePath);
+    BelZWriter(const std::string& CSVFilePath , const std::string& outputFilePath);
     void EnsureCapacity(size_t add_size);
     uint64_t GetOffSet();
     void WriteScheme(const Scheme& scheme);

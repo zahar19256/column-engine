@@ -677,7 +677,7 @@ namespace ClickBench {
             ColumnType::Int64));
         return MakeGroupByOrderByLimitQueryPlan(
             table_name,
-            {MakeColumnExpr("RegionID" , ColumnType::Int32)},
+            {MakeColumnExpr("RegionID" , ColumnType::Int64)},
             std::move(aggregates),
             {MakeColumnExpr("u" , ColumnType::Int64)},
             {SortDirection::Desc},
@@ -692,7 +692,7 @@ namespace ClickBench {
         aggregates.push_back(MakeAggrCall(Aggregation::AggregationType::Distinct, std::string("UserID"), "uniq_user_id", ColumnType::Int64, ColumnType::Int64));
         return MakeGroupByOrderByLimitQueryPlan(
             table_name,
-            {MakeColumnExpr("RegionID" , ColumnType::Int32)},
+            {MakeColumnExpr("RegionID" , ColumnType::Int64)},
             std::move(aggregates),
             {MakeColumnExpr("c" , ColumnType::Int64)},
             {SortDirection::Desc},
@@ -914,7 +914,7 @@ namespace ClickBench {
         return MakeFilteredGroupByHavingOrderByLimitQueryPlan(
             table_name,
             MakeNotEmptyPredicate("URL"),
-            {MakeColumnExpr("CounterID" , ColumnType::Int32)},
+            {MakeColumnExpr("CounterID" , ColumnType::Int64)},
             std::move(aggregates),
             MakeFilter({"c" , "100000" , Filters::OpType::Greater}),
             {MakeColumnExpr("l" , ColumnType::Int64)},
@@ -930,7 +930,7 @@ namespace ClickBench {
         return MakeFilteredGroupByOrderByLimitQueryPlan(
             table_name,
             MakeNotEmptyPredicate("SearchPhrase"),
-            {MakeColumnExpr("SearchEngineID" , ColumnType::Int16), MakeColumnExpr("ClientIP" , ColumnType::Int32)},
+            {MakeColumnExpr("SearchEngineID" , ColumnType::Int16), MakeColumnExpr("ClientIP" , ColumnType::Int64)},
             std::move(aggregates),
             {MakeColumnExpr("c" , ColumnType::Int64)},
             {SortDirection::Desc},
@@ -945,7 +945,7 @@ namespace ClickBench {
         return MakeFilteredGroupByOrderByLimitQueryPlan(
             table_name,
             MakeNotEmptyPredicate("SearchPhrase"),
-            {MakeColumnExpr("WatchID" , ColumnType::Int64), MakeColumnExpr("ClientIP" , ColumnType::Int32)},
+            {MakeColumnExpr("WatchID" , ColumnType::Int64), MakeColumnExpr("ClientIP" , ColumnType::Int64)},
             std::move(aggregates),
             {MakeColumnExpr("c" , ColumnType::Int64)},
             {SortDirection::Desc},
@@ -959,7 +959,7 @@ namespace ClickBench {
         aggregates.push_back(MakeAggrCall(Aggregation::AggregationType::Avg, std::string("ResolutionWidth"), "avg_resolution_width", ColumnType::Int16, ColumnType::Int16));
         return MakeGroupByOrderByLimitQueryPlan(
             table_name,
-            {MakeColumnExpr("WatchID" , ColumnType::Int64), MakeColumnExpr("ClientIP" , ColumnType::Int32)},
+            {MakeColumnExpr("WatchID" , ColumnType::Int64), MakeColumnExpr("ClientIP" , ColumnType::Int64)},
             std::move(aggregates),
             {MakeColumnExpr("c" , ColumnType::Int64)},
             {SortDirection::Desc},

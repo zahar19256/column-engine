@@ -4,6 +4,7 @@
 #include "Row.h"
 #include "Scheme.h"
 #include <cstring>
+#include <filesystem>
 #include <memory.h>
 
 void CSVConvertor::Reset() {
@@ -40,10 +41,16 @@ bool CSVConvertor::GetChunk(CSVReader& scan_) {
 }
 
 void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath) {
+    std::filesystem::path dest_path(CSVFilePath);
+    dest_path.replace_extension(".belZ");
+    MakeBelZFormat(CSVFilePath , SchemeFilePath , dest_path.string());
+}
+
+void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath, const std::string& outputFilePath) {
     Reset();
     CSVReader scan_(CSVFilePath);
     GetScheme(SchemeFilePath);
-    BelZWriter writer(CSVFilePath);
+    BelZWriter writer(CSVFilePath , outputFilePath);
     size_t col_count = scheme_.Size();
     chunk_.Init(scheme_);
     meta_.SetScheme(std::move(scheme_));

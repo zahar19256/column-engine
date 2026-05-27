@@ -25,10 +25,20 @@ void BelZWriter::EnsureCapacity(size_t additional_size) {
     }
 }
 
-BelZWriter::BelZWriter(const std::string& CSVFilePath) {
-    std::filesystem::path src_path(CSVFilePath);
-    std::filesystem::path dest_path = src_path;
-    dest_path.replace_extension(".belZ");
+BelZWriter::BelZWriter(const std::string& CSVFilePath)
+    : BelZWriter(CSVFilePath , [] (const std::string& path) {
+        std::filesystem::path dest_path(path);
+        dest_path.replace_extension(".belZ");
+        return dest_path.string();
+    }(CSVFilePath)) {
+}
+
+BelZWriter::BelZWriter(const std::string& CSVFilePath , const std::string& outputFilePath) {
+    (void)CSVFilePath;
+    std::filesystem::path dest_path(outputFilePath);
+    if (dest_path.has_parent_path()) {
+        std::filesystem::create_directories(dest_path.parent_path());
+    }
     fout_.open(dest_path , std::ios::binary | std::ios::out);
     buf_.resize(STANDART_BUCKET_SIZE * 2);
     if (!fout_.is_open()) {

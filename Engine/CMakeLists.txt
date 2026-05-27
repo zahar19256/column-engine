@@ -82,6 +82,10 @@ add_executable(clickbench_runner
     ClickBenchRunner.cpp
 )
 
+add_executable(clickbench_convert
+    ClickBenchConvert.cpp
+)
+
 target_link_libraries(test_engine
     PRIVATE
         Engine
@@ -95,6 +99,11 @@ target_link_libraries(clickbench_q1
 )
 
 target_link_libraries(clickbench_runner
+    PRIVATE
+        Engine
+)
+
+target_link_libraries(clickbench_convert
     PRIVATE
         Engine
 )
