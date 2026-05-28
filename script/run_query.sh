@@ -14,8 +14,10 @@ COLUMNAR="$2"
 OUTPUT="$3"
 LOG_FILE="$4"
 CLICKBENCH_QUERY=$((QUERY_INDEX + 1))
+RESULTS_DIR="$(dirname "${OUTPUT}")"
+GLOBAL_LOG="${RESULTS_DIR}/summary.csv"
 
-mkdir -p "$(dirname "${OUTPUT}")"
+mkdir -p "${RESULTS_DIR}"
 mkdir -p "$(dirname "${LOG_FILE}")"
 
 if [[ ! -x "${RUNNER}" ]]; then
@@ -59,9 +61,11 @@ query_ms="0.000"
 write_ms="0.000"
 total_ms="0.000"
 read_ms="0.000"
+error_message=""
 
 if [[ -n "${line}" ]]; then
   IFS=',' read -r parsed_query status rows query_ms write_ms total_ms parsed_file read_ms parsed_error <<< "${line}"
+  error_message="${parsed_error:-}"
 fi
 
 if [[ -f "${runner_output}" ]]; then
@@ -72,6 +76,33 @@ elif [[ "${runner_status}" == "ok" ]]; then
 else
   : > "${OUTPUT}"
 fi
+
+if [[ "${runner_status}" != "ok" && -z "${error_message}" ]]; then
+  error_message="runner_exit_${runner_exit}"
+fi
+
+if [[ ! -f "${GLOBAL_LOG}" ]]; then
+  printf 'query_index,clickbench_query,status,runner_exit_code,rows,query_ms,read_ms,write_ms,runner_total_ms,wall_ms,output_bytes,output,log,error\n' > "${GLOBAL_LOG}"
+fi
+
+{
+  printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,' \
+    "${QUERY_INDEX}" \
+    "${CLICKBENCH_QUERY}" \
+    "${status}" \
+    "${runner_exit}" \
+    "${rows}" \
+    "${query_ms}" \
+    "${read_ms}" \
+    "${write_ms}" \
+    "${total_ms}" \
+    "$((finish_ms - start_ms))" \
+    "$(stat -c '%s' "${OUTPUT}" 2>/dev/null || echo 0)"
+  printf '"%s","%s","%s"\n' \
+    "${OUTPUT//\"/\"\"}" \
+    "${LOG_FILE//\"/\"\"}" \
+    "${error_message//\"/\"\"}"
+} >> "${GLOBAL_LOG}"
 
 {
   printf 'status=%s\n' "${status}"
