@@ -110,6 +110,9 @@ namespace ClickBench {
         SetScanColumns(query, RequiredColumns(query));
     }
 
+    // attention всё что дальше это LLM составлял запросы и билдеры
+    // TODO разгрести это
+
     inline std::unique_ptr<QueryNode> MakeProjectionPlan(
         std::unique_ptr<QueryNode> child ,
         std::vector<std::string> need_columns ,
