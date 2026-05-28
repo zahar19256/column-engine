@@ -30,6 +30,7 @@ if(NOT re2_FOUND)
     add_library(re2::re2 INTERFACE IMPORTED)
     target_link_libraries(re2::re2 INTERFACE PkgConfig::RE2)
 endif()
+find_package(absl CONFIG REQUIRED)
 
 add_library(Engine
     Execution/Executor.cpp
@@ -69,6 +70,8 @@ target_compile_options(Engine
 target_link_libraries(Engine
     PUBLIC
         file_tools
+        absl::flat_hash_map
+        absl::flat_hash_set
         re2::re2
 )
 
