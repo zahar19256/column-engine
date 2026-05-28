@@ -55,18 +55,73 @@ namespace Filters {
         regex += c;
     }
 
+    inline bool CheckLikeSymbol(std::string_view value) {
+        for (const char c : value) {
+            if (c == '%' || c == '_' || c == '\\') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     template<typename T>
     concept StringLike = std::same_as<T, std::string> ||
                      std::same_as<T, std::string_view> ||
                      std::same_as<T, const char*> ||
                      std::same_as<T, char*>;
+    template <typename ColumnType , StringLike ValueType>
+    inline boost::dynamic_bitset<> Contain(const ColumnType& column , const ValueType& value , bool Not = false) {
+        const std::string_view needle(value);
+        boost::dynamic_bitset<> result(column.Size());
+        for (size_t index = 0; index < column.Size(); ++index) {
+            result[index] = Not ^ (column.At(index).find(needle) != std::string_view::npos);
+        }
+        return result;
+    }
+
+    template <typename ColumnType , StringLike ValueType>
+    inline boost::dynamic_bitset<> StartWith(const ColumnType& column , const ValueType& value , bool Not = false) {
+        const std::string_view prefix(value);
+        boost::dynamic_bitset<> result(column.Size());
+        for (size_t index = 0; index < column.Size(); ++index) {
+            result[index] = Not ^ column.At(index).starts_with(prefix);
+        }
+        return result;
+    }
+
+    template <typename ColumnType , StringLike ValueType>
+    inline boost::dynamic_bitset<> EndWith(const ColumnType& column , const ValueType& value , bool Not = false) {
+        const std::string_view suffix(value);
+        boost::dynamic_bitset<> result(column.Size());
+        for (size_t index = 0; index < column.Size(); ++index) {
+            result[index] = Not ^ column.At(index).ends_with(suffix);
+        }
+        return result;
+    }
+
     template <typename ColumnType, StringLike ValueType>
     inline boost::dynamic_bitset<> MakeLike(const ColumnType& column , const ValueType& value , bool Not = false) {
+        const std::string_view pattern(value);
+        if (pattern.empty()) {
+            return MakeEqual(column , std::string_view("") , Not);
+        }
+        if (!CheckLikeSymbol(pattern)) {
+            return MakeEqual(column , pattern , Not);
+        }
+        if (pattern.size() >= 2 && pattern.front() == '%' && pattern.back() == '%' && !CheckLikeSymbol(pattern.substr(1 , pattern.size() - 2))) {
+            return Contain(column , pattern.substr(1 , pattern.size() - 2) , Not);
+        }
+        if (pattern.back() == '%' && !CheckLikeSymbol(pattern.substr(0 , pattern.size() - 1))) {
+            return StartWith(column , pattern.substr(0 , pattern.size() - 1) , Not);
+        }
+        if (pattern.front() == '%' && !CheckLikeSymbol(pattern.substr(1))) {
+            return EndWith(column , pattern.substr(1) , Not);
+        }
         std::string regex = "^";
-        for (size_t i = 0; i < value.size(); ++i) {
-            const char c = value[i];
-            if (c == '\\' && i + 1 < value.size()) {
-                AppendRegexLiteral(regex , value[++i]);
+        for (size_t i = 0; i < pattern.size(); ++i) {
+            const char c = pattern[i];
+            if (c == '\\' && i + 1 < pattern.size()) {
+                AppendRegexLiteral(regex , pattern[++i]);
             } else if (c == '%') {
                 regex += ".*";
             } else if (c == '_') {
