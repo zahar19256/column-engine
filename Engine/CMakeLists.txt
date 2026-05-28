@@ -23,7 +23,13 @@ add_subdirectory(
     "${CMAKE_CURRENT_BINARY_DIR}/FileBasicTools"
 )
 
-find_package(re2 CONFIG REQUIRED)
+find_package(re2 CONFIG QUIET)
+if(NOT re2_FOUND)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(RE2 REQUIRED IMPORTED_TARGET re2)
+    add_library(re2::re2 INTERFACE IMPORTED)
+    target_link_libraries(re2::re2 INTERFACE PkgConfig::RE2)
+endif()
 
 add_library(Engine
     Execution/Executor.cpp

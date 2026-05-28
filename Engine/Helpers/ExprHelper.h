@@ -41,6 +41,35 @@ inline std::shared_ptr<ScalarExpr> MakeUnaryExpr(std::shared_ptr<ScalarExpr> exp
     return std::make_shared<UnaryExpr>(std::move(expression) , type);
 }
 
+inline std::shared_ptr<ScalarExpr> MakeBinaryExpr(
+    std::shared_ptr<ScalarExpr> left ,
+    std::shared_ptr<ScalarExpr> right ,
+    BinaryExprType type ,
+    ColumnType out_type = ColumnType::Unknown) {
+    return std::make_shared<BinaryExpr>(std::move(left) , std::move(right) , type , out_type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeAddExpr(
+    std::shared_ptr<ScalarExpr> left ,
+    std::shared_ptr<ScalarExpr> right ,
+    ColumnType out_type = ColumnType::Unknown) {
+    return MakeBinaryExpr(std::move(left) , std::move(right) , BinaryExprType::Add , out_type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeSubExpr(
+    std::shared_ptr<ScalarExpr> left ,
+    std::shared_ptr<ScalarExpr> right ,
+    ColumnType out_type = ColumnType::Unknown) {
+    return MakeBinaryExpr(std::move(left) , std::move(right) , BinaryExprType::Sub , out_type);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeCaseWhenExpr(
+    std::vector<std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases ,
+    std::shared_ptr<ScalarExpr> else_expr ,
+    ColumnType out_type = ColumnType::Unknown) {
+    return std::make_shared<CaseWhenExpr>(std::move(cases) , std::move(else_expr) , out_type);
+}
+
 inline std::shared_ptr<ScalarExpr> MakeLengthExpr(std::shared_ptr<ScalarExpr> expression) {
     return MakeUnaryExpr(std::move(expression) , UnaryExprType::Length);
 }

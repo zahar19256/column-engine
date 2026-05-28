@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <utility>
 #include <variant>
+#include <vector>
 #include <optional>
 
 enum class ExprType {
@@ -52,6 +53,169 @@ public:
     virtual ColumnType GetType() const {
         return ColumnType::Unknown;
     }
+};
+
+class CaseWhenExpr : public ScalarExpr {
+public:
+    // attention я устал и заставил AI родить этот класс по описанию
+    // TODO сделать его более урезанным так как для кликбенча ИИ-перестарался
+    CaseWhenExpr(
+        std::vector<std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases ,
+        std::shared_ptr<ScalarExpr> else_expr ,
+        ColumnType out_type = ColumnType::Unknown)
+        : cases_(std::move(cases)) ,
+          else_(std::move(else_expr)) ,
+          out_type_(out_type) {
+    }
+
+    ColumnType GetType() const override {
+        if (out_type_ != ColumnType::Unknown) {
+            return out_type_;
+        }
+        if (else_ && else_->GetType() != ColumnType::Unknown) {
+            return else_->GetType();
+        }
+        for (const auto& [predicate , expression] : cases_) {
+            if (expression && expression->GetType() != ColumnType::Unknown) {
+                return expression->GetType();
+            }
+        }
+        return ColumnType::Unknown;
+    }
+
+    void CollectColumns(std::unordered_set<std::string>& result) const override {
+        for (const auto& [predicate , expression] : cases_) {
+            if (predicate) {
+                predicate->CollectColumns(result);
+            }
+            if (expression) {
+                expression->CollectColumns(result);
+            }
+        }
+        if (else_) {
+            else_->CollectColumns(result);
+        }
+    }
+
+    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
+        if (!else_) {
+            throw std::runtime_error("CaseWhenExpr requires ELSE expression!");
+        }
+        const size_t rows = data.GetRows();
+        const ColumnType result_type = GetType();
+        if (result_type == ColumnType::Unknown) {
+            throw std::runtime_error("Unknown CaseWhenExpr output type!");
+        }
+
+        std::vector<boost::dynamic_bitset<>> masks;
+        std::vector<std::shared_ptr<Column>> columns;
+        masks.reserve(cases_.size());
+        columns.reserve(cases_.size());
+        for (const auto& [predicate , expression] : cases_) {
+            if (!predicate || !expression) {
+                throw std::runtime_error("CaseWhenExpr has empty case!");
+            }
+            auto mask = predicate->Eval(data);
+            if (mask.size() != rows) {
+                throw std::runtime_error("CaseWhenExpr condition mask size mismatch!");
+            }
+            auto column = expression->EvalBatch(data);
+            CheckColumn(column , rows , result_type);
+            masks.push_back(std::move(mask));
+            columns.push_back(std::move(column));
+        }
+
+        auto else_column = else_->EvalBatch(data);
+        CheckColumn(else_column , rows , result_type);
+
+        auto result = MakeColumn(result_type);
+        result->Reserve(rows);
+        for (size_t row = 0; row < rows; ++row) {
+            bool was_inserted = false;
+            for (size_t case_id = 0; case_id < cases_.size(); ++case_id) {
+                if (masks[case_id][row]) {
+                    PushValue(result , columns[case_id] , row , result_type);
+                    was_inserted = true;
+                    break;
+                }
+            }
+            if (!was_inserted) {
+                PushValue(result , else_column , row , result_type);
+            }
+        }
+        return result;
+    }
+private:
+    static void CheckColumn(const std::shared_ptr<Column>& column , size_t rows , ColumnType type) {
+        if (!column) {
+            throw std::runtime_error("CaseWhenExpr got empty column!");
+        }
+        if (column->Size() != rows) {
+            throw std::runtime_error("CaseWhenExpr column size mismatch!");
+        }
+        if (column->GetType() != type) {
+            throw std::runtime_error("CaseWhenExpr column type mismatch!");
+        }
+    }
+
+    template <typename ColumnT>
+    static void PushTypedValue(const std::shared_ptr<Column>& result , const std::shared_ptr<Column>& source , size_t row) {
+        auto result_column = As<ColumnT>(result);
+        auto source_column = As<ColumnT>(source);
+        if (!result_column || !source_column) {
+            throw std::runtime_error("CaseWhenExpr typed column mismatch!");
+        }
+        result_column->Push_Back(source_column->At(row));
+    }
+
+    static void PushStringValue(const std::shared_ptr<Column>& result , const std::shared_ptr<Column>& source , size_t row) {
+        auto result_column = As<StringColumn>(result);
+        auto source_column = As<StringColumn>(source);
+        if (!result_column || !source_column) {
+            throw std::runtime_error("CaseWhenExpr string column mismatch!");
+        }
+        const auto value = source_column->At(row);
+        result_column->AppendFromString(value.data() , value.size());
+    }
+
+    static void PushValue(const std::shared_ptr<Column>& result , const std::shared_ptr<Column>& source , size_t row , ColumnType type) {
+        switch(type) {
+            case ColumnType::Int8:
+                PushTypedValue<Int8Column>(result , source , row);
+                return;
+            case ColumnType::Int16:
+                PushTypedValue<Int16Column>(result , source , row);
+                return;
+            case ColumnType::Int32:
+                PushTypedValue<Int32Column>(result , source , row);
+                return;
+            case ColumnType::Int64:
+                PushTypedValue<Int64Column>(result , source , row);
+                return;
+            case ColumnType::Double:
+                PushTypedValue<DoubleColumn>(result , source , row);
+                return;
+            case ColumnType::String:
+                PushStringValue(result , source , row);
+                return;
+            case ColumnType::Date:
+                PushTypedValue<DateColumn>(result , source , row);
+                return;
+            case ColumnType::Timestamp:
+                PushTypedValue<TimeStampColumn>(result , source , row);
+                return;
+            case ColumnType::Int128:
+                PushTypedValue<Int128Column>(result , source , row);
+                return;
+            case ColumnType::Unknown:
+                break;
+        }
+        throw std::runtime_error("Unknown CaseWhenExpr output type!");
+    }
+
+    std::vector <std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases_;
+    std::shared_ptr<ScalarExpr> else_;
+    ColumnType out_type_ = ColumnType::Unknown;
 };
 
 class UnaryExpr : public ScalarExpr {
@@ -227,6 +391,17 @@ private:
 
 class BinaryExpr : public ScalarExpr {
 public:
+    BinaryExpr(
+        std::shared_ptr<ScalarExpr> left ,
+        std::shared_ptr<ScalarExpr> right ,
+        BinaryExprType op ,
+        ColumnType out_type = ColumnType::Unknown)
+        : op_(op) ,
+          left_(std::move(left)) ,
+          right_(std::move(right)) ,
+          out_type_(out_type) {
+    }
+
     ColumnType GetType() const override {
         return out_type_;
     }

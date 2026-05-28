@@ -425,9 +425,11 @@ std::vector<QueryPlanInfo> MakePlanInfos(const std::set<size_t>& only_queries) {
         {33 , ClickBench::MakeThirtyThirdQueryPlan},
         {34 , ClickBench::MakeThirtyFourthQueryPlan},
         {35 , ClickBench::MakeThirtyFifthQueryPlan},
+        {36 , ClickBench::MakeThirtySixthQueryPlan},
         {37 , ClickBench::MakeThirtySeventhQueryPlan},
         {38 , ClickBench::MakeThirtyEighthQueryPlan},
         {39 , ClickBench::MakeThirtyNinthQueryPlan},
+        {40 , ClickBench::MakeFortiethQueryPlan},
         {41 , ClickBench::MakeFortyFirstQueryPlan},
         {42 , ClickBench::MakeFortySecondQueryPlan},
     };
@@ -513,9 +515,11 @@ std::vector<BenchQuery> MakeQueries(const std::set<size_t>& only_queries) {
         {33 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyThirdQueryPlan(table_name) , file); }},
         {34 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyFourthQueryPlan(table_name) , file); }},
         {35 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyFifthQueryPlan(table_name) , file); }},
+        {36 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtySixthQueryPlan(table_name) , file); }},
         {37 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtySeventhQueryPlan(table_name) , file); }},
         {38 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyEighthQueryPlan(table_name) , file); }},
         {39 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyNinthQueryPlan(table_name) , file); }},
+        {40 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortiethQueryPlan(table_name) , file); }},
         {41 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortyFirstQueryPlan(table_name) , file); }},
         {42 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortySecondQueryPlan(table_name) , file); }},
     };

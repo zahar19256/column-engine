@@ -289,6 +289,42 @@ TEST(UnaryExpr, LengthReturnsStringSizes) {
     EXPECT_EQ(result->At(2), 1);
 }
 
+TEST(BinaryExpr, SubtractsLiteralFromColumn) {
+    auto sub_expr = MakeSubExpr(
+        MakeColumnExpr("value", ColumnType::Int64),
+        MakeLiteralExpr(int64_t{3}, ColumnType::Int64),
+        ColumnType::Int64);
+
+    EXPECT_EQ(sub_expr->GetType(), ColumnType::Int64);
+    const auto result = As<Int64Column>(sub_expr->EvalBatch(MakeInt64Batch()));
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->Size(), 3);
+    EXPECT_EQ(result->At(0), 7);
+    EXPECT_EQ(result->At(1), 17);
+    EXPECT_EQ(result->At(2), 27);
+}
+
+TEST(CaseWhenExpr, SelectsFirstMatchingBranchAndElse) {
+    std::vector<std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases;
+    cases.emplace_back(
+        std::shared_ptr<PredicateExpr>(MakeFilter({"value" , "15" , Filters::OpType::Greater})) ,
+        MakeColumnExpr("name", ColumnType::String));
+
+    auto case_expr = MakeCaseWhenExpr(
+        std::move(cases),
+        MakeLiteralExpr(std::string(""), ColumnType::String),
+        ColumnType::String);
+
+    EXPECT_EQ(case_expr->GetType(), ColumnType::String);
+    const auto result = As<StringColumn>(case_expr->EvalBatch(MakeMixedBatch()));
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->Size(), 4);
+    EXPECT_EQ(result->At(0), "");
+    EXPECT_EQ(result->At(1), "b");
+    EXPECT_EQ(result->At(2), "c");
+    EXPECT_EQ(result->At(3), "d");
+}
+
 TEST(AggregationExecutor, AppliesInputMask) {
     Aggregation::AggregationCall call{
         .type = Aggregation::AggregationType::Sum,
@@ -665,7 +701,15 @@ TEST(ClickBenchQueries, NewQueryBuildersProduceBatches) {
     EXPECT_LE(q34.GetRows(), 10);
     EXPECT_GE(q34.Size(), 2);
 
+    Batch q36 = ClickBench::RunThirtySixthQuery(table_name);
+    EXPECT_LE(q36.GetRows(), 10);
+    EXPECT_GE(q36.Size(), 5);
+
     Batch q39 = ClickBench::RunThirtyNinthQuery(table_name);
     EXPECT_LE(q39.GetRows(), 10);
     EXPECT_GE(q39.Size(), 2);
+
+    Batch q40 = ClickBench::RunFortiethQuery(table_name);
+    EXPECT_LE(q40.GetRows(), 10);
+    EXPECT_GE(q40.Size(), 6);
 }

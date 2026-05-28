@@ -986,6 +986,28 @@ namespace ClickBench {
             10);
     }
 
+    inline std::shared_ptr<ScalarExpr> MakeClientIPMinus(int64_t value) {
+        return MakeSubExpr(
+            MakeColumnExpr("ClientIP" , ColumnType::Int64),
+            MakeLiteralExpr(value , ColumnType::Int64),
+            ColumnType::Int64);
+    }
+
+    inline std::unique_ptr<QueryNode> MakeThirtySixthQueryPlan(const std::string& table_name) {
+        return MakeGroupByOrderByLimitQueryPlan(
+            table_name,
+            {
+                MakeColumnExpr("ClientIP" , ColumnType::Int64),
+                MakeClientIPMinus(1),
+                MakeClientIPMinus(2),
+                MakeClientIPMinus(3),
+            },
+            CountAs("c"),
+            {MakeColumnExpr("c" , ColumnType::Int64)},
+            {SortDirection::Desc},
+            10);
+    }
+
     inline std::unique_ptr<QueryNode> MakeThirtySeventhQueryPlan(const std::string& table_name) {
         return MakeFilteredGroupByOrderByLimitQueryPlan(
             table_name,
@@ -1016,6 +1038,38 @@ namespace ClickBench {
             table_name,
             std::move(predicate),
             {MakeColumnExpr("URL" , ColumnType::String)},
+            CountAs("PageViews"),
+            {MakeColumnExpr("PageViews" , ColumnType::Int64)},
+            {SortDirection::Desc},
+            1010);
+        return MakeLimitPlan(std::move(order) , 10 , 1000);
+    }
+
+    inline std::shared_ptr<ScalarExpr> MakeFortiethQuerySrcExpr() {
+        auto predicate = MakeFilter({"SearchEngineID" , "0" , Filters::OpType::Equal});
+        predicate = MakeAndPredicate(std::move(predicate) , MakeFilter({"AdvEngineID" , "0" , Filters::OpType::Equal}));
+
+        std::vector<std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases;
+        cases.emplace_back(
+            std::shared_ptr<PredicateExpr>(std::move(predicate)) ,
+            MakeColumnExpr("Referer" , ColumnType::String));
+        return MakeCaseWhenExpr(
+            std::move(cases) ,
+            MakeLiteralExpr(std::string("") , ColumnType::String) ,
+            ColumnType::String);
+    }
+
+    inline std::unique_ptr<QueryNode> MakeFortiethQueryPlan(const std::string& table_name) {
+        auto order = MakeFilteredGroupByOrderByLimitQueryPlan(
+            table_name,
+            MakeJulyCounterPredicate(false, false),
+            {
+                MakeColumnExpr("TraficSourceID" , ColumnType::Int16),
+                MakeColumnExpr("SearchEngineID" , ColumnType::Int16),
+                MakeColumnExpr("AdvEngineID" , ColumnType::Int16),
+                MakeFortiethQuerySrcExpr(),
+                MakeColumnExpr("URL" , ColumnType::String),
+            },
             CountAs("PageViews"),
             {MakeColumnExpr("PageViews" , ColumnType::Int64)},
             {SortDirection::Desc},
@@ -1325,6 +1379,10 @@ namespace ClickBench {
         return RunQuery(MakeThirtyFifthQueryPlan(table_name));
     }
 
+    inline Batch RunThirtySixthQuery(const std::string& table_name) {
+        return RunQuery(MakeThirtySixthQueryPlan(table_name));
+    }
+
     inline Batch RunThirtySeventhQuery(const std::string& table_name) {
         return RunQuery(MakeThirtySeventhQueryPlan(table_name));
     }
@@ -1335,6 +1393,10 @@ namespace ClickBench {
 
     inline Batch RunThirtyNinthQuery(const std::string& table_name) {
         return RunQuery(MakeThirtyNinthQueryPlan(table_name));
+    }
+
+    inline Batch RunFortiethQuery(const std::string& table_name) {
+        return RunQuery(MakeFortiethQueryPlan(table_name));
     }
 
     inline Batch RunFortyFirstQuery(const std::string& table_name) {
