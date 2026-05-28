@@ -31,6 +31,8 @@ if command -v apt-get >/dev/null 2>&1; then
     ca-certificates \
     cmake \
     git \
+    libabsl-dev \
+    libboost-dev \
     libgtest-dev \
     libre2-dev \
     make \
@@ -41,6 +43,8 @@ elif command -v pacman >/dev/null 2>&1; then
     base-devel \
     cmake \
     git \
+    abseil-cpp \
+    boost \
     gtest \
     re2
 else
