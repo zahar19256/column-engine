@@ -289,6 +289,34 @@ TEST(UnaryExpr, LengthReturnsStringSizes) {
     EXPECT_EQ(result->At(2), 1);
 }
 
+TEST(UnaryExpr, RegexpReplaceRewritesStringColumn) {
+    Scheme scheme;
+    scheme.Push_Back(SchemeNode{"referer", ColumnType::String});
+
+    auto referers = std::make_shared<StringColumn>();
+    referers->Push_Back("https://www.example.com/path");
+    referers->Push_Back("http://openai.com/docs");
+    referers->Push_Back("plain");
+
+    Batch batch;
+    batch.SetScheme(scheme);
+    batch.AddColumn(referers);
+    batch.InitMsk();
+
+    const auto expression = MakeRegexpReplaceExpr(
+        MakeColumnExpr("referer", ColumnType::String),
+        R"(^https?://(?:www\.)?([^/]+)/.*$)",
+        R"(\1)");
+
+    EXPECT_EQ(expression->GetType(), ColumnType::String);
+    const auto result = As<StringColumn>(expression->EvalBatch(batch));
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->Size(), 3);
+    EXPECT_EQ(result->At(0), "example.com");
+    EXPECT_EQ(result->At(1), "openai.com");
+    EXPECT_EQ(result->At(2), "plain");
+}
+
 TEST(BinaryExpr, SubtractsLiteralFromColumn) {
     auto sub_expr = MakeSubExpr(
         MakeColumnExpr("value", ColumnType::Int64),
@@ -504,7 +532,7 @@ TEST(ProjectionExecutor, ProjectsColumnsWithMatchingSchemeAndAliases) {
     EXPECT_EQ(output.Size(), 1);
     EXPECT_EQ(output.GetRows(), 2);
     EXPECT_EQ(output.GetScheme().Size(), 1);
-    EXPECT_EQ(output.GetScheme().GetName(0), "b");
+    EXPECT_EQ(output.GetScheme().GetName(0), "answer");
 
     auto projected = As<Int64Column>(output.GetColumn("b"));
     auto alias = As<Int64Column>(output.GetColumn("answer"));
@@ -588,6 +616,54 @@ TEST(FilterExecutor, LikeSupportsSingleCharacterWildcardAndEscapes) {
     EXPECT_FALSE(escaped_percent[1]);
     EXPECT_FALSE(escaped_percent[2]);
     EXPECT_TRUE(escaped_percent[3]);
+}
+
+TEST(FilterExecutor, LikeUsesSimpleStringFastPaths) {
+    auto values = std::make_shared<StringColumn>();
+    values->Push_Back("https://google.com/search");
+    values->Push_Back("https://example.com/google");
+    values->Push_Back("http://example.com");
+    values->Push_Back("plain");
+
+    const boost::dynamic_bitset<> contains = Filters::ColumnTypedFilter(
+        *values,
+        Filters::OpType::Like,
+        std::string_view("%google%"));
+    ASSERT_EQ(contains.size(), 4);
+    EXPECT_TRUE(contains[0]);
+    EXPECT_TRUE(contains[1]);
+    EXPECT_FALSE(contains[2]);
+    EXPECT_FALSE(contains[3]);
+
+    const boost::dynamic_bitset<> starts_with = Filters::ColumnTypedFilter(
+        *values,
+        Filters::OpType::Like,
+        std::string_view("https://%"));
+    ASSERT_EQ(starts_with.size(), 4);
+    EXPECT_TRUE(starts_with[0]);
+    EXPECT_TRUE(starts_with[1]);
+    EXPECT_FALSE(starts_with[2]);
+    EXPECT_FALSE(starts_with[3]);
+
+    const boost::dynamic_bitset<> ends_with = Filters::ColumnTypedFilter(
+        *values,
+        Filters::OpType::Like,
+        std::string_view("%google"));
+    ASSERT_EQ(ends_with.size(), 4);
+    EXPECT_FALSE(ends_with[0]);
+    EXPECT_TRUE(ends_with[1]);
+    EXPECT_FALSE(ends_with[2]);
+    EXPECT_FALSE(ends_with[3]);
+
+    const boost::dynamic_bitset<> not_like = Filters::ColumnTypedFilter(
+        *values,
+        Filters::OpType::NotLike,
+        std::string_view("%google%"));
+    ASSERT_EQ(not_like.size(), 4);
+    EXPECT_FALSE(not_like[0]);
+    EXPECT_FALSE(not_like[1]);
+    EXPECT_TRUE(not_like[2]);
+    EXPECT_TRUE(not_like[3]);
 }
 
 TEST(FilterExecutor, LikeRejectsNonStringColumns) {
@@ -684,6 +760,11 @@ TEST(ClickBenchQueries, NewQueryBuildersProduceBatches) {
     EXPECT_LE(q28.GetRows(), 25);
     EXPECT_GE(q28.Size(), 3);
 
+    Batch q29 = ClickBench::RunTwentyNinthQuery(table_name);
+    EXPECT_LE(q29.GetRows(), 25);
+    EXPECT_GE(q29.Size(), 4);
+    EXPECT_EQ(q29.GetScheme().GetName(0), "k");
+
     Batch q30 = ClickBench::RunThirtiethQuery(table_name);
     EXPECT_EQ(q30.GetRows(), 1);
     EXPECT_EQ(q30.Size(), ClickBench::kQuery30Columns);
@@ -712,4 +793,9 @@ TEST(ClickBenchQueries, NewQueryBuildersProduceBatches) {
     Batch q40 = ClickBench::RunFortiethQuery(table_name);
     EXPECT_LE(q40.GetRows(), 10);
     EXPECT_GE(q40.Size(), 6);
+
+    Batch q43 = ClickBench::RunFortyThirdQuery(table_name);
+    EXPECT_LE(q43.GetRows(), 10);
+    EXPECT_EQ(q43.Size(), 2);
+    EXPECT_EQ(q43.GetScheme().GetName(0), "M");
 }

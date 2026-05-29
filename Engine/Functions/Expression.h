@@ -220,10 +220,18 @@ private:
 
 class UnaryExpr : public ScalarExpr {
 public:
-    explicit UnaryExpr(std::shared_ptr<ScalarExpr> col , UnaryExprType type) : column_(std::move(col)) , type_(type) {
+    explicit UnaryExpr(std::shared_ptr<ScalarExpr> col , UnaryExprType type , std::optional<std::string> arg1 = std::nullopt , std::optional<std::string> arg2 = std::nullopt)
+        : column_(std::move(col)) , type_(type) , arg1_(std::move(arg1)) , arg2_(std::move(arg2)) {
+        if (type_ == UnaryExprType::RegexpReplace && (!arg1_ || !arg2_)) {
+            throw std::runtime_error("RegexpReplace requires pattern and replacement!");
+        }
     }
     std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
-        return ApplyUnaryOp(type_ , column_->EvalBatch(data));
+        auto column = column_->EvalBatch(data);
+        if (type_ == UnaryExprType::RegexpReplace) {
+            return ApplyRegexpReplace(column , *arg1_ , *arg2_);
+        }
+        return ApplyUnaryOp(type_ , column);
     }
     void CollectColumns(std::unordered_set<std::string>& result) const override {
         if (column_) {
@@ -236,6 +244,11 @@ public:
                 return ColumnType::Int8;
             case UnaryExprType::Length:
                 return ColumnType::Int64;
+            case UnaryExprType::DateFormatHour:
+            case UnaryExprType::DateTruncMinute:
+                return ColumnType::Timestamp;
+            case UnaryExprType::RegexpReplace:
+                return ColumnType::String;
             default:
                 throw std::runtime_error("Not supported unary type op!");
         }
@@ -243,6 +256,8 @@ public:
 private:
     std::shared_ptr<ScalarExpr> column_; 
     UnaryExprType type_;
+    std::optional<std::string> arg1_;
+    std::optional<std::string> arg2_;
 };
 
 class ColumnExpr : public ScalarExpr {

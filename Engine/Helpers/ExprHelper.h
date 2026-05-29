@@ -78,6 +78,21 @@ inline std::shared_ptr<ScalarExpr> MakeExtractMinuteExpr(std::shared_ptr<ScalarE
     return MakeUnaryExpr(std::move(expression) , UnaryExprType::ExtractMinute);
 }
 
+inline std::shared_ptr<ScalarExpr> MakeDateTruncMinuteExpr(std::shared_ptr<ScalarExpr> expression) {
+    return MakeUnaryExpr(std::move(expression) , UnaryExprType::DateTruncMinute);
+}
+
+inline std::shared_ptr<ScalarExpr> MakeRegexpReplaceExpr(
+    std::shared_ptr<ScalarExpr> expression ,
+    std::string pattern ,
+    std::string replacement) {
+    return std::make_shared<UnaryExpr>(
+        std::move(expression) ,
+        UnaryExprType::RegexpReplace ,
+        std::move(pattern) ,
+        std::move(replacement));
+}
+
 inline std::unique_ptr<PredicateExpr> MakePredicate(const std::vector<PredicateCommandElement>& tree , size_t& pos) {
     if (pos >= tree.size()) {
         throw std::runtime_error("Predicate tree size not matching!");

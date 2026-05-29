@@ -348,7 +348,6 @@ namespace Aggregation {
 
         static StateType Init() {
             StateType result;
-            result.storage.reserve(8192);
             return result;
         }
 

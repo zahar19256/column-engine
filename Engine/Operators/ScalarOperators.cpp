@@ -1,8 +1,10 @@
 #include "ScalarOperators.h"
 #include "Column.h"
 #include "Scheme.h"
+#include <re2/re2.h>
 #include <memory>
 #include <stdexcept>
+#include <string>
 
 template <NumericColumn LeftColumnType , NumericColumn RightColumnType , typename ResultColumnType>
 std::shared_ptr<Column> ColumnAdd(std::shared_ptr<LeftColumnType> left , std::shared_ptr<RightColumnType> right , ResultColumnType result) {
@@ -16,9 +18,35 @@ std::shared_ptr<Column> ColumnAdd(std::shared_ptr<LeftColumnType> left , std::sh
     return result;
 }
 
+std::shared_ptr<Column> DropToHours(std::shared_ptr<Column> current) { // TODO пока что данная функция заменяет DATE_FORMAT и по сути является хардкодом для кликбенча
+    if (current->GetType() != ColumnType::Timestamp) {
+        throw std::runtime_error("Not timestamp column type in DropToHours!");
+    }
+    std::shared_ptr<TimeStampColumn> result = std::make_shared<TimeStampColumn>();
+    result->Reserve(current->Size());
+    const int64_t* data = As<TimeStampColumn>(current)->Data();
+    for (size_t i = 0; i < current->Size(); ++i) {
+        result->Push_Back(data[i] - data[i] % 3600);
+    }
+    return result;
+}
+
+std::shared_ptr<Column> DropToMinute(std::shared_ptr<Column> current) {
+    if (current->GetType() != ColumnType::Timestamp) {
+        throw std::runtime_error("Not timestamp column type in DropToMinute!");
+    }
+    std::shared_ptr<TimeStampColumn> result = std::make_shared<TimeStampColumn>();
+    result->Reserve(current->Size());
+    const int64_t* data = As<TimeStampColumn>(current)->Data();
+    for (size_t i = 0; i < current->Size(); ++i) {
+        result->Push_Back(data[i] - data[i] % 60);
+    }
+    return result;
+}
+
 std::shared_ptr<Column> ExtractMinute(std::shared_ptr<Column> current) {
     if (current->GetType() != ColumnType::Timestamp) {
-        throw std::runtime_error("Not timestamp column Type in ExtractMinute");
+        throw std::runtime_error("Not timestamp column Type in ExtractMinute!");
     }
     std::shared_ptr<Int8Column> result = std::make_shared<Int8Column>();
     result->Reserve(current->Size());
@@ -31,7 +59,7 @@ std::shared_ptr<Column> ExtractMinute(std::shared_ptr<Column> current) {
 
 std::shared_ptr<Column> Length(std::shared_ptr<Column> current) {
     if (current->GetType() != ColumnType::String) {
-        throw std::runtime_error("Not string column in Length scalar operator");
+        throw std::runtime_error("Not string column in Length scalar operator!");
     }
     std::shared_ptr<Int64Column> result = std::make_shared<Int64Column>();
     result->Reserve(current->Size());
@@ -40,6 +68,28 @@ std::shared_ptr<Column> Length(std::shared_ptr<Column> current) {
     for (size_t i = 0; i < current->Size(); ++i) {
         result->Push_Back(data[i] - last);
         last = data[i];
+    }
+    return result;
+}
+
+std::shared_ptr<Column> ApplyRegexpReplace(
+    std::shared_ptr<Column> current ,
+    const std::string& pattern ,
+    const std::string& replacement) {
+    if (current->GetType() != ColumnType::String) {
+        throw std::runtime_error("Not string column in RegReplace scalar operator!");
+    }
+    const RE2 regex(pattern);
+    if (!regex.ok()) {
+        throw std::runtime_error("Invalid RegReplace regex: " + regex.error());
+    }
+    std::shared_ptr<StringColumn> source = As<StringColumn>(current);
+    std::shared_ptr<StringColumn> result = std::make_shared<StringColumn>();
+    result->Reserve(source->Size());
+    for (size_t i = 0; i < source->Size(); ++i) {
+        std::string value(source->At(i));
+        RE2::GlobalReplace(&value , regex , replacement);
+        result->Push_Back(value);
     }
     return result;
 }
@@ -156,6 +206,12 @@ std::shared_ptr<Column> ApplyUnaryOp(UnaryExprType op , std::shared_ptr<Column> 
             return ExtractMinute(current);
         case UnaryExprType::Length:
             return Length(current);
+        case UnaryExprType::DateFormatHour:
+            return DropToHours(current);
+        case UnaryExprType::DateTruncMinute:
+            return DropToMinute(current);
+        case UnaryExprType::RegexpReplace:
+            throw std::runtime_error("RegexpReplace requires pattern and replacement from UnaryExpr!");
         default:
             throw std::runtime_error("Not implemented unary op type!");
     }

@@ -163,17 +163,26 @@ public:
         }
         Batch result;
         Scheme scheme;
+        std::vector<std::pair<std::string , std::string>> source_aliases;
         for (size_t i = 0; i < need_columns_.size(); ++i) {
             if (need_indexes_[i] == std::nullopt) {
                 need_indexes_[i] = data.GetScheme().GetIndex(need_columns_[i]);
             }
             result.AddColumn(data.GetColumn(need_indexes_[i].value()));
-            scheme.Push_Back(data.GetScheme().GetInfo(need_indexes_[i].value()));
+            SchemeNode info = data.GetScheme().GetInfo(need_indexes_[i].value());
+            for (const auto& [source , alias] : alias_) {
+                if (source == need_columns_[i]) {
+                    info.name = alias;
+                    source_aliases.emplace_back(alias , source);
+                    break;
+                }
+            }
+            scheme.Push_Back(std::move(info));
         }
         result.SetScheme(scheme);
         result.SetMsk(data.GetMsk());
-        for (size_t index = 0; index < alias_.size(); ++index) {
-            result.AddAlias(alias_[index].first , alias_[index].second);
+        for (const auto& [current_name , alias] : source_aliases) {
+            result.AddAlias(current_name , alias);
         }
         std::swap(result , data);
         return true;

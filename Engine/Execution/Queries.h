@@ -925,6 +925,50 @@ namespace ClickBench {
             25);
     }
 
+    inline std::shared_ptr<ScalarExpr> MakeTwentyNinthQueryKeyExpr() {
+        return MakeRegexpReplaceExpr(
+            MakeColumnExpr("Referer" , ColumnType::String),
+            R"(^https?://(?:www\.)?([^/]+)/.*$)",
+            R"(\1)");
+    }
+
+    inline std::unique_ptr<QueryNode> MakeTwentyNinthQueryPlan(const std::string& table_name) {
+        std::vector<Aggregation::AggregationCall> aggregates;
+        aggregates.push_back(MakeAggrCall(
+            Aggregation::AggregationType::Avg,
+            MakeLengthExpr(MakeColumnExpr("Referer" , ColumnType::String)),
+            "l",
+            ColumnType::Int64,
+            ColumnType::Int64));
+        aggregates.push_back(MakeAggrCall(
+            Aggregation::AggregationType::Count,
+            std::nullopt,
+            "c",
+            ColumnType::Unknown,
+            ColumnType::Int64));
+        aggregates.push_back(MakeAggrCall(
+            Aggregation::AggregationType::Min,
+            std::string("Referer"),
+            "min_referer",
+            ColumnType::String,
+            ColumnType::String));
+        auto order = MakeFilteredGroupByHavingOrderByLimitQueryPlan(
+            table_name,
+            MakeNotEmptyPredicate("Referer"),
+            {MakeTwentyNinthQueryKeyExpr()},
+            std::move(aggregates),
+            MakeFilter({"c" , "100000" , Filters::OpType::Greater}),
+            {MakeColumnExpr("l" , ColumnType::Int64)},
+            {SortDirection::Desc},
+            25);
+        auto projection = MakeProjectionPlan(
+            std::move(order),
+            {"group_0" , "l" , "c" , "min_referer"},
+            {"k" , "l" , "c" , "min_referer"});
+        PushRequiredColumnsToScans(*projection);
+        return projection;
+    }
+
     inline std::unique_ptr<QueryNode> MakeThirtyFirstQueryPlan(const std::string& table_name) {
         std::vector<Aggregation::AggregationCall> aggregates;
         aggregates.push_back(MakeAggrCall(Aggregation::AggregationType::Count, std::nullopt, "c", ColumnType::Unknown, ColumnType::Int64));
@@ -1107,6 +1151,31 @@ namespace ClickBench {
             {SortDirection::Desc},
             10010);
         return MakeLimitPlan(std::move(order) , 10 , 10000);
+    }
+
+    inline std::unique_ptr<PredicateExpr> MakeFortyThirdQueryPredicate() {
+        auto result = MakeFilter({"CounterID" , "62" , Filters::OpType::Equal});
+        result = MakeAndPredicate(std::move(result) , MakeFilter({"EventDate" , "2013-07-14" , Filters::OpType::GreaterOrEqual}));
+        result = MakeAndPredicate(std::move(result) , MakeFilter({"EventDate" , "2013-07-15" , Filters::OpType::LessOrEqual}));
+        result = MakeAndPredicate(std::move(result) , MakeFilter({"IsRefresh" , "0" , Filters::OpType::Equal}));
+        result = MakeAndPredicate(std::move(result) , MakeFilter({"DontCountHits" , "0" , Filters::OpType::Equal}));
+        return result;
+    }
+
+    inline std::unique_ptr<QueryNode> MakeFortyThirdQueryPlan(const std::string& table_name) {
+        auto minute = MakeDateTruncMinuteExpr(MakeColumnExpr("EventTime" , ColumnType::Timestamp));
+        auto order = MakeFilteredGroupByOrderByLimitQueryPlan(
+            table_name,
+            MakeFortyThirdQueryPredicate(),
+            {minute},
+            CountAs("PageViews"),
+            {MakeColumnExpr("group_0" , ColumnType::Timestamp)},
+            {SortDirection::Asc},
+            1010);
+        auto limit = MakeLimitPlan(std::move(order) , 10 , 1000);
+        auto projection = MakeProjectionPlan(std::move(limit) , {"group_0" , "PageViews"} , {"M" , "PageViews"});
+        PushRequiredColumnsToScans(*projection);
+        return projection;
     }
 
     inline int64_t RunFirstQueryCount(const std::string& table_name) {
@@ -1362,6 +1431,10 @@ namespace ClickBench {
         return RunQuery(MakeTwentyEighthQueryPlan(table_name));
     }
 
+    inline Batch RunTwentyNinthQuery(const std::string& table_name) {
+        return RunQuery(MakeTwentyNinthQueryPlan(table_name));
+    }
+
     inline Batch RunThirtyFirstQuery(const std::string& table_name) {
         return RunQuery(MakeThirtyFirstQueryPlan(table_name));
     }
@@ -1408,6 +1481,10 @@ namespace ClickBench {
 
     inline Batch RunFortySecondQuery(const std::string& table_name) {
         return RunQuery(MakeFortySecondQueryPlan(table_name));
+    }
+
+    inline Batch RunFortyThirdQuery(const std::string& table_name) {
+        return RunQuery(MakeFortyThirdQueryPlan(table_name));
     }
 
 } // namespace ClickBench
