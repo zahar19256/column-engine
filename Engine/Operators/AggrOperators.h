@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include "Row.h"
 #include "absl/container/flat_hash_set.h"
 
 namespace Aggregation {

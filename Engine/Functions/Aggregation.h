@@ -1,5 +1,4 @@
 #pragma once
-#include "../../FileBasicTools/DataStructures/Batch.h"
 #include "../../FileBasicTools/DataStructures/Column.h"
 #include "../../FileBasicTools/DataStructures/Types.h"
 #include "../Functions/Expression.h"
@@ -9,7 +8,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <utility>
 
 namespace Aggregation {
     enum class AggregationType : uint8_t {
