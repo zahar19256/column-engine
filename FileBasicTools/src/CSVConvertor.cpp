@@ -59,7 +59,6 @@ void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::str
         //std::cerr << "!!!" << rows_in_chunk << ' ' << col_count << std::endl;
         meta_.AddBatchOffset(writer.GetOffSet());
         meta_.AddRows(rows_in_chunk);
-        meta_.AddCodec(0);
         for (size_t column_idx = 0; column_idx < col_count; ++column_idx) {
             meta_.AddColumnOffset(writer.GetOffSet());
             writer.AppendColumn(chunk_.GetColumn(column_idx) , chunk_.GetType(column_idx));

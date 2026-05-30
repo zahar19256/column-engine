@@ -1,5 +1,6 @@
 #include "BelZReader.h"
 #include "Column.h"
+#include "Decoder.h"
 #include "MetaData.h"
 #include "Scheme.h"
 #include <filesystem>
@@ -58,28 +59,27 @@ std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , s
     if (need_offset != -1) {
         stream_.seekg(need_offset);  
     }
-    switch(type) {
-        case ColumnType::Int8:
-            return ReadIntergerColumn<int8_t>(size);
-        case ColumnType::Int16:
-            return ReadIntergerColumn<int16_t>(size);
-        case ColumnType::Int32:
-            return ReadIntergerColumn<int32_t>(size);
-        case ColumnType::Date:
-            return ReadDateColumn(size);
-        case ColumnType::Timestamp:
-            return ReadTimestampColumn(size);
-        case ColumnType::Int64:
-            return ReadIntergerColumn<int64_t>(size);
-        case ColumnType::Int128:
-            return ReadIntergerColumn<__int128_t>(size);
-        case ColumnType::String:
-            return ReadStringColumn(size);
-        case ColumnType::Double:
-            return ReadDoubleColumn(size);
-        default:
-            throw std::runtime_error("Try to read from .belz unknown ColumnType:" + std::to_string(static_cast<int8_t>(type)));
+    CodecType codec;
+    size_t payload_size = 0;
+    stream_.read(reinterpret_cast<char*>(&codec) , sizeof(codec));
+    stream_.read(reinterpret_cast<char*>(&payload_size) , sizeof(payload_size));
+    if (!stream_) {
+        throw std::runtime_error("Failed to read encoded column header");
     }
+    EncodedColumn encoded;
+    encoded.codec = codec;
+    encoded.data.resize(payload_size);
+    if (payload_size != 0) {
+        stream_.read(reinterpret_cast<char*>(encoded.data.data()) , payload_size);
+        if (!stream_) {
+            throw std::runtime_error("Failed to read encoded column payload");
+        }
+    }
+    auto result = Decoder::DecodeColumn(encoded , type);
+    if (result->Size() != size) {
+        throw std::runtime_error("Decoded column size mismatch: expected " + std::to_string(size) + ", got " + std::to_string(result->Size()));
+    }
+    return result;
 }
 
 void BelZReader::ReadMetaData() {

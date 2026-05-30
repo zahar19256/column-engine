@@ -38,6 +38,8 @@ add_library(file_tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZReader.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZWriter.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Coder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Coder.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVConvertor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVConvertor.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZConvertor.cpp

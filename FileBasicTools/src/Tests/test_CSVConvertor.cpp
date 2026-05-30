@@ -5,6 +5,7 @@
 #include <string>
 #include <cstring>
 
+#include "BelZReader.h"
 #include "CSVConvertor.h"
 namespace fs = std::filesystem;
 
@@ -66,55 +67,22 @@ TEST_F(CSVConvertorTest, EndToEnd_TranspositionCheck) {
     // 3. Проверка существования файла
     ASSERT_TRUE(fs::exists(belzPath)) << "Output .belZ file was not created";
 
-    // 4. Проверка содержимого (Самая важная часть)
-    auto data = ReadBytes();
-    
-    // Мы ожидаем, что CSVConvertor считал чанк (обе строки) и записал их транспонированно.
-    // Порядок в файле (до метаданных) должен быть таким:
-    // [Колонка 1 (id)]: 10, 20
-    // [Колонка 2 (name)]: "Alice", "Bob"
-    
-    const uint8_t* ptr = data.data();
+    BelZReader reader(belzPath);
+    Batch batch;
+    reader.ReadBatch(batch);
 
-    // --- Проверяем Колонку 1 (Int64) ---
-    // Сначала должно идти число 10
-    int64_t val1 = 0;
-    std::memcpy(&val1, ptr, sizeof(int64_t));
-    ptr += sizeof(int64_t);
-    EXPECT_EQ(val1, 10);
-    // Сразу за ним должно идти число 20 (а НЕ строка "Alice", если транспонирование работает)
-    int64_t val2 = 0;
-    std::memcpy(&val2, ptr, sizeof(int64_t));
-    ptr += sizeof(int64_t);
-    EXPECT_EQ(val2, 20);
-    // --- Проверяем Колонку 2 (String) ---
-    // Строковая колонка пишется блочно: [data_size][offsets_count][data][offsets].
-    size_t data_size = 0;
-    std::memcpy(&data_size, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(data_size, 8); // AliceBob
+    ASSERT_EQ(batch.Size(), 2);
+    auto ids = As<Int64Column>(batch.GetColumn(0));
+    auto names = As<StringColumn>(batch.GetColumn(1));
+    ASSERT_NE(ids, nullptr);
+    ASSERT_NE(names, nullptr);
+    ASSERT_EQ(ids->Size(), 2);
+    ASSERT_EQ(names->Size(), 2);
 
-    size_t offsets_count = 0;
-    std::memcpy(&offsets_count, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offsets_count, 2);
-
-    std::string data_blob(reinterpret_cast<const char*>(ptr), data_size);
-    ptr += data_size;
-    EXPECT_EQ(data_blob, "AliceBob");
-
-    size_t offset1 = 0;
-    std::memcpy(&offset1, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offset1, 5);
-
-    size_t offset2 = 0;
-    std::memcpy(&offset2, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offset2, 8);
-    
-    // После данных должны идти Метаданные (Footer), но их мы детально проверяли в BelZWriter.
-    // Главное, что мы подтвердили транспонирование: сначала все ID, потом все Имена.
+    EXPECT_EQ((*ids)[0], 10);
+    EXPECT_EQ((*ids)[1], 20);
+    EXPECT_EQ((*names)[0], "Alice");
+    EXPECT_EQ((*names)[1], "Bob");
 }
 
 // Тест на случай, если файла схемы нет
