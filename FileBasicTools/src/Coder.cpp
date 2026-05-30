@@ -7,6 +7,7 @@ void Dictionary::Apply(std::shared_ptr<StringColumn> col, EncodedColumn &result)
     }
     size_t last = 0;
     std::unordered_map<std::string_view , size_t> dictionary;
+    dictionary.reserve(col->Size());
     std::vector<int32_t> offset;
     std::vector<int16_t> index;
     std::vector<std::string_view> unique_string;
@@ -58,16 +59,26 @@ EncodedColumn GetBestCompression(std::shared_ptr<Column> col) {
                 return raw_encode;
             }
         };
-        default: {
-            EncodedColumn raw_encode;
-            EncodedColumn bit_encode;
-            Raw::Apply(col , raw_encode);
-            BitPack::Apply(col , bit_encode);
-            if (bit_encode.data.size() < raw_encode.data.size()) {
-                return bit_encode;
-            } else {
-                return raw_encode;
-            }
-        }
-    }
-}
+	        default: {
+	            EncodedColumn raw_encode;
+	            Raw::Apply(col , raw_encode);
+	            switch(col->GetType()) {
+	                case ColumnType::Int8:
+	                case ColumnType::Int16:
+	                case ColumnType::Int32:
+	                case ColumnType::Int64:
+	                case ColumnType::Date:
+	                case ColumnType::Timestamp:
+	                    break;
+	                default:
+	                    return raw_encode;
+	            }
+	            if (BitPack::CountSize(col) * 2 <= raw_encode.data.size()) {
+	                EncodedColumn bit_encode;
+	                BitPack::Apply(col , bit_encode);
+	                return bit_encode;
+	            }
+	            return raw_encode;
+	        }
+	    }
+	}

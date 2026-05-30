@@ -121,19 +121,33 @@ inline std::shared_ptr<Column> DecodeDictionary(const EncodedColumn& column , Co
         throw std::runtime_error("Invalid dictionary index block size!");
     }
 
-    auto result = std::make_shared<StringColumn>();
-    size_t rows_count = (column.data.size() - pos) / sizeof(int16_t);
-    result->Reserve(rows_count);
-    for (size_t i = 0; i < rows_count; ++i) {
-        int16_t index_signed = 0;
-        memcpy(&index_signed , column.data.data() + pos , sizeof(index_signed));
-        pos += sizeof(index_signed);
-        if (index_signed < 0 || static_cast<size_t>(index_signed) >= unique_count) {
-            throw std::runtime_error("Invalid dictionary index!");
-        }
-        size_t index = static_cast<size_t>(index_signed);
-        size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
-        size_t end = static_cast<size_t>(offsets[index]);
+	auto result = std::make_shared<StringColumn>();
+	size_t rows_count = (column.data.size() - pos) / sizeof(int16_t);
+	size_t indices_pos = pos;
+	size_t decoded_data_size = 0;
+	for (size_t i = 0; i < rows_count; ++i) {
+	    int16_t index_signed = 0;
+	    memcpy(&index_signed , column.data.data() + pos , sizeof(index_signed));
+	    pos += sizeof(index_signed);
+	    if (index_signed < 0 || static_cast<size_t>(index_signed) >= unique_count) {
+	        throw std::runtime_error("Invalid dictionary index!");
+	    }
+	    size_t index = static_cast<size_t>(index_signed);
+	    size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
+	    size_t end = static_cast<size_t>(offsets[index]);
+	    decoded_data_size += end - start;
+	}
+
+	result->Reserve(rows_count);
+	result->ReserveData(decoded_data_size);
+	pos = indices_pos;
+	for (size_t i = 0; i < rows_count; ++i) {
+	    int16_t index_signed = 0;
+	    memcpy(&index_signed , column.data.data() + pos , sizeof(index_signed));
+	    pos += sizeof(index_signed);
+	    size_t index = static_cast<size_t>(index_signed);
+	    size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
+	    size_t end = static_cast<size_t>(offsets[index]);
         result->AppendFromString(dictionary_data + start , end - start);
     }
     return result;

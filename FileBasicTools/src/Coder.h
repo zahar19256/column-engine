@@ -132,38 +132,59 @@ namespace BitPack {
 	        if (!col || col->Size() == 0) {
 	            return sizeof(size_t) + sizeof(uint8_t);
 	        }
-	        uint8_t bits_per_value = 1;
-	        const auto* data = col->Data();
-	        for (size_t i = 0; i < col->Size(); ++i) {
-	            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
-	        }
+        uint8_t bits_per_value = 1;
+        const auto* data = col->Data();
+        for (size_t i = 0; i < col->Size(); ++i) {
+            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
+        }
 	        size_t payload_bits = static_cast<size_t>(bits_per_value) * col->Size();
 	        return sizeof(size_t) + sizeof(uint8_t) + (payload_bits + 7) / 8;
 	    }
-	    template <typename ColumnT>
-	    void Apply(std::shared_ptr<ColumnT> col , EncodedColumn& result) {
-	        size_t rows_count = col ? col->Size() : 0;
-	        if (!col || col->Size() == 0) {
-	            std::vector<uint8_t> bytes(sizeof(size_t) + sizeof(uint8_t) , 0);
-	            memcpy(bytes.data() , &rows_count , sizeof(rows_count));
-	            result = {CodecType::BitPack , std::move(bytes)};
-	            return;
+	    inline size_t CountSize(std::shared_ptr<Column> col) {
+	        if (!col) {
+	            throw std::runtime_error("Null column in BitPack::CountSize!");
 	        }
-	        uint8_t bits_per_value = 1;
-	        const auto* data = col->Data();
-	        for (size_t i = 0; i < col->Size(); ++i) {
-	            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
+	        switch(col->GetType()) {
+	            case ColumnType::Int8:
+	                return CountSize(As<Int8Column>(col));
+	            case ColumnType::Int16:
+	                return CountSize(As<Int16Column>(col));
+	            case ColumnType::Int32:
+	                return CountSize(As<Int32Column>(col));
+	            case ColumnType::Int64:
+	                return CountSize(As<Int64Column>(col));
+	            case ColumnType::Date:
+	                return CountSize(As<DateColumn>(col));
+	            case ColumnType::Timestamp:
+	                return CountSize(As<TimeStampColumn>(col));
+	            default:
+	                throw std::runtime_error("String or unknown type column in BitPack::CountSize!");
 	        }
-	        std::vector<uint8_t> bytes(CountSize(col) , 0);
-	        size_t pos = 0;
-	        memcpy(bytes.data() + pos , &rows_count , sizeof(rows_count));
-	        pos += sizeof(rows_count);
-	        bytes[pos] = bits_per_value;
-	        ++pos;
-	        size_t offset = pos * 8;
-	        for (size_t i = 0; i < col->Size(); ++i) {
-	            WriteBits(bytes , offset , EncodeSigned(data[i] , bits_per_value) , bits_per_value);
-	        }
+	    }
+		template <typename ColumnT>
+		void Apply(std::shared_ptr<ColumnT> col , EncodedColumn& result) {
+        size_t rows_count = col ? col->Size() : 0;
+        if (!col || col->Size() == 0) {
+            std::vector<uint8_t> bytes(sizeof(size_t) + sizeof(uint8_t) , 0);
+            memcpy(bytes.data() , &rows_count , sizeof(rows_count));
+            result = {CodecType::BitPack , std::move(bytes)};
+            return;
+        }
+        uint8_t bits_per_value = 1;
+        const auto* data = col->Data();
+        for (size_t i = 0; i < col->Size(); ++i) {
+            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
+        }
+        std::vector<uint8_t> bytes(CountSize(col) , 0);
+        size_t pos = 0;
+        memcpy(bytes.data() + pos , &rows_count , sizeof(rows_count));
+        pos += sizeof(rows_count);
+        bytes[pos] = bits_per_value;
+        ++pos;
+        size_t offset = pos * 8;
+        for (size_t i = 0; i < col->Size(); ++i) {
+            WriteBits(bytes , offset , EncodeSigned(data[i] , bits_per_value) , bits_per_value);
+        }
         result = {CodecType::BitPack , std::move(bytes)};
     }
     inline void Apply(std::shared_ptr<Column> col , EncodedColumn& result) {
