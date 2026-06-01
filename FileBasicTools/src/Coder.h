@@ -2,9 +2,7 @@
 #include "Column.h"
 #include "Scheme.h"
 #include <algorithm>
-#include <bit>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -16,7 +14,7 @@ template<typename T> concept StringLike = std::same_as<T, std::string> || std::s
 
 enum class CodecType : int8_t {
     Raw = 0,
-    BitPack, // bit + delta for digits
+    BitPack, // byte-aligned bit packing for integer-like columns
     Delta, // 
     Diction // only for strings
 };
@@ -98,34 +96,48 @@ namespace BitPack {
     template <typename T>
     uint8_t RequiredBits(T value) {
         int64_t signed_value = static_cast<int64_t>(value);
-        if (signed_value == std::numeric_limits<int64_t>::min()) {
-            return 64;
+        if (signed_value >= std::numeric_limits<int8_t>::min() && signed_value <= std::numeric_limits<int8_t>::max()) {
+            return 8;
         }
-        uint64_t abs_value = static_cast<uint64_t>(std::llabs(signed_value));
-        if (abs_value == 0) {
-            return 1;
+        if (signed_value >= std::numeric_limits<int16_t>::min() && signed_value <= std::numeric_limits<int16_t>::max()) {
+            return 16;
         }
-        return static_cast<uint8_t>(std::bit_width(abs_value) + 1);
+        if (signed_value >= std::numeric_limits<int32_t>::min() && signed_value <= std::numeric_limits<int32_t>::max()) {
+            return 32;
+        }
+        return 64;
     }
+
     template <typename T>
-    uint64_t EncodeSigned(T value, uint8_t bits_per_value) {
-        int64_t signed_value = static_cast<int64_t>(value);
-        uint64_t mask;
-        if (bits_per_value == 64) {
-            mask = ~uint64_t(0);
-        } else {
-            mask = (uint64_t(1) << bits_per_value) - 1;
-        }
-        return static_cast<uint64_t>(signed_value) & mask;
-    }
-    inline void WriteBits(std::vector<uint8_t>& out , size_t& bit_offset , uint64_t value , uint8_t bits) {
-        for (uint8_t bit = 0; bit < bits; ++bit) {
-            const size_t target_bit = bit_offset + bit;
-            if ((value >> bit) & 1ULL) {
-                out[target_bit / 8] |= static_cast<uint8_t>(1U << (target_bit % 8));
+    void WritePackedValue(std::vector<uint8_t>& out , size_t& pos , T value , uint8_t bits_per_value) {
+        switch(bits_per_value) {
+            case 8: {
+                int8_t stored = static_cast<int8_t>(value);
+                memcpy(out.data() + pos , &stored , sizeof(stored));
+                pos += sizeof(stored);
+                return;
             }
+            case 16: {
+                int16_t stored = static_cast<int16_t>(value);
+                memcpy(out.data() + pos , &stored , sizeof(stored));
+                pos += sizeof(stored);
+                return;
+            }
+            case 32: {
+                int32_t stored = static_cast<int32_t>(value);
+                memcpy(out.data() + pos , &stored , sizeof(stored));
+                pos += sizeof(stored);
+                return;
+            }
+            case 64: {
+                int64_t stored = static_cast<int64_t>(value);
+                memcpy(out.data() + pos , &stored , sizeof(stored));
+                pos += sizeof(stored);
+                return;
+            }
+            default:
+                throw std::runtime_error("Invalid bitpack bits per value!");
         }
-        bit_offset += bits;
     }
 	    template <typename ColumnT>
 	    size_t CountSize(std::shared_ptr<ColumnT> col) {
@@ -134,11 +146,11 @@ namespace BitPack {
 	        }
         uint8_t bits_per_value = 1;
         const auto* data = col->Data();
-        for (size_t i = 0; i < col->Size(); ++i) {
-            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
-        }
-	        size_t payload_bits = static_cast<size_t>(bits_per_value) * col->Size();
-	        return sizeof(size_t) + sizeof(uint8_t) + (payload_bits + 7) / 8;
+	        for (size_t i = 0; i < col->Size(); ++i) {
+	            bits_per_value = std::max(bits_per_value , RequiredBits(data[i]));
+	        }
+	        size_t bytes_per_value = static_cast<size_t>(bits_per_value) / 8;
+	        return sizeof(size_t) + sizeof(uint8_t) + bytes_per_value * col->Size();
 	    }
 	    inline size_t CountSize(std::shared_ptr<Column> col) {
 	        if (!col) {
@@ -181,9 +193,8 @@ namespace BitPack {
         pos += sizeof(rows_count);
         bytes[pos] = bits_per_value;
         ++pos;
-        size_t offset = pos * 8;
         for (size_t i = 0; i < col->Size(); ++i) {
-            WriteBits(bytes , offset , EncodeSigned(data[i] , bits_per_value) , bits_per_value);
+            WritePackedValue(bytes , pos , data[i] , bits_per_value);
         }
         result = {CodecType::BitPack , std::move(bytes)};
     }
