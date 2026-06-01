@@ -136,3 +136,84 @@ TEST_F(CSVWriterTest, CustomDelimiter) {
     std::string content = ReadFileToString(expectedFile);
     EXPECT_EQ(content, "1;val\n");
 }
+
+TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
+    const std::string output = "test_writer_exact.csv";
+    if (fs::exists(output)) fs::remove(output);
+
+    auto int8_col = std::make_shared<Int8Column>();
+    int8_col->Push_Back(1);
+    int8_col->Push_Back(2);
+
+    auto int16_col = std::make_shared<Int16Column>();
+    int16_col->Push_Back(10);
+    int16_col->Push_Back(20);
+
+    auto int32_col = std::make_shared<Int32Column>();
+    int32_col->Push_Back(100);
+    int32_col->Push_Back(200);
+
+    auto int64_col = std::make_shared<Int64Column>();
+    int64_col->Push_Back(1000);
+    int64_col->Push_Back(2000);
+
+    auto int128_col = std::make_shared<Int128Column>();
+    int128_col->Push_Back(static_cast<__int128_t>(1000000000000LL) * 1000000);
+    int128_col->Push_Back(-static_cast<__int128_t>(1000000000000LL) * 1000000);
+
+    auto double_col = std::make_shared<DoubleColumn>();
+    double_col->Push_Back(1.25);
+    double_col->Push_Back(2.5);
+
+    auto string_col = std::make_shared<StringColumn>();
+    string_col->Push_Back("plain");
+    string_col->Push_Back("quoted,value");
+
+    auto date_col = std::make_shared<DateColumn>();
+    date_col->Push_Back(Data::ParseDate("2013-07-15"));
+    date_col->Push_Back(Data::ParseDate("2013-07-16"));
+
+    auto timestamp_col = std::make_shared<TimeStampColumn>();
+    timestamp_col->Push_Back(Data::ParseTimestamp("2013-07-15 10:47:34"));
+    timestamp_col->Push_Back(Data::ParseTimestamp("2013-07-16 11:00:00"));
+
+    Batch batch;
+    Scheme scheme;
+    scheme.Push_Back({"i8", ColumnType::Int8});
+    scheme.Push_Back({"i16", ColumnType::Int16});
+    scheme.Push_Back({"i32", ColumnType::Int32});
+    scheme.Push_Back({"i64", ColumnType::Int64});
+    scheme.Push_Back({"i128", ColumnType::Int128});
+    scheme.Push_Back({"d", ColumnType::Double});
+    scheme.Push_Back({"s", ColumnType::String});
+    scheme.Push_Back({"date", ColumnType::Date});
+    scheme.Push_Back({"ts", ColumnType::Timestamp});
+    batch.SetScheme(scheme);
+    batch.AddColumn(int8_col);
+    batch.AddColumn(int16_col);
+    batch.AddColumn(int32_col);
+    batch.AddColumn(int64_col);
+    batch.AddColumn(int128_col);
+    batch.AddColumn(double_col);
+    batch.AddColumn(string_col);
+    batch.AddColumn(date_col);
+    batch.AddColumn(timestamp_col);
+
+    boost::dynamic_bitset<> mask(2);
+    mask.set(1);
+    batch.SetMsk(mask);
+
+    {
+        CSVWriter writer(output, CSVWriter::PathMode::ExactPath, true);
+        writer.WriteBatch(batch);
+        EXPECT_EQ(writer.Rows(), 1);
+    }
+
+    std::string content = ReadFileToString(output);
+    std::string expected =
+        "i8,i16,i32,i64,i128,d,s,date,ts\n"
+        "2,20,200,2000,-1000000000000000000,2.5,\"quoted,value\",2013-07-16,2013-07-16 11:00:00\n";
+    EXPECT_EQ(content, expected);
+
+    if (fs::exists(output)) fs::remove(output);
+}

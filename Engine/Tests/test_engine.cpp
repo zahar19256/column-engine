@@ -563,6 +563,51 @@ TEST(LimitExecutor, AppliesOffsetAndLimitInsideBatch) {
     EXPECT_EQ(names->At(1), "c");
 }
 
+TEST(OrderByExecutor, UsesEquivalenceClassesAcrossSortKeys) {
+    Scheme scheme;
+    scheme.Push_Back(SchemeNode{"a", ColumnType::Int64});
+    scheme.Push_Back(SchemeNode{"b", ColumnType::Int64});
+
+    auto first_key = std::make_shared<Int64Column>();
+    first_key->Push_Back(1);
+    first_key->Push_Back(1);
+    first_key->Push_Back(1);
+    first_key->Push_Back(2);
+
+    auto second_key = std::make_shared<Int64Column>();
+    second_key->Push_Back(10);
+    second_key->Push_Back(30);
+    second_key->Push_Back(20);
+    second_key->Push_Back(99);
+
+    Batch input;
+    input.SetScheme(scheme);
+    input.AddColumn(first_key);
+    input.AddColumn(second_key);
+    input.InitMsk();
+
+    OrderByExecutor executor(
+        {MakeColumnExpr("a", ColumnType::Int64), MakeColumnExpr("b", ColumnType::Int64)},
+        2,
+        {SortDirection::Asc, SortDirection::Desc});
+    executor.child = std::make_shared<SingleBatchExecutor>(std::move(input));
+
+    Batch output;
+    ASSERT_TRUE(executor.Next(output));
+    EXPECT_FALSE(executor.Next(output));
+    EXPECT_EQ(output.GetRows(), 2);
+
+    auto a = As<Int64Column>(output.GetColumn("a"));
+    auto b = As<Int64Column>(output.GetColumn("b"));
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(b, nullptr);
+
+    EXPECT_EQ(a->At(0), 1);
+    EXPECT_EQ(b->At(0), 30);
+    EXPECT_EQ(a->At(1), 1);
+    EXPECT_EQ(b->At(1), 20);
+}
+
 TEST(FilterExecutor, LikeMatchesSqlWildcards) {
     auto values = std::make_shared<StringColumn>();
     values->Push_Back("https://example.com/search");

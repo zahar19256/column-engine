@@ -151,7 +151,39 @@ public:
         : limit_(limit) , directions_(std::move(directions)) {
     }
 
-    void UpdateBatch(const std::vector<std::shared_ptr<ScalarExpr>>& order , const Batch& data);
+    void UpdateBatch(const std::vector<std::shared_ptr<ScalarExpr>>& order , const Batch& data) {
+        const auto& mask = data.GetMsk();
+        std::vector<size_t> index;
+        std::vector<size_t> classes;
+        std::vector<std::shared_ptr<Column>> keys;
+        index.reserve(data.GetRows());
+        classes.reserve(data.GetRows());
+        keys.reserve(order.size());
+        bool use_mask = !mask.empty() && mask.count() != mask.size();
+        for (size_t i = 0; i < data.GetRows(); ++i) {
+            if (!use_mask || mask[i]) {
+                index.push_back(i);
+                classes.push_back(0);
+            }
+        }
+        for (size_t expr_index = 0; expr_index < order.size(); ++expr_index) {
+            std::shared_ptr<Column> col = order[expr_index]->EvalBatch(data);
+            keys.push_back(col);
+            const SortDirection direction =
+                expr_index < directions_.size() ? directions_[expr_index] : SortDirection::Asc;
+            DispatchTopK(col , index , classes , limit_ , direction);
+        }
+        if (index.size() > limit_) {
+            index.resize(limit_);
+            classes.resize(limit_);
+        }
+        TopKBatch batch_result;
+        MaterializeTopK(data , keys , index , batch_result , limit_);
+        Merge(result_ , batch_result , limit_ , directions_);
+        index_ = std::move(index);
+        classes_ = std::move(classes);
+
+    }
     const std::vector<size_t>& Index() const {
         return index_;
     }

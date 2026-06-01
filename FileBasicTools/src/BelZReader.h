@@ -4,20 +4,13 @@
 #include "MetaData.h"
 #include "Scheme.h"
 #include <cstddef>
-#include <cstdint>
+#include <fstream>
 #include <memory>
-#include <string>
-#include <sys/types.h>
 #include <vector>
 
 class BelZReader {
 public:
     BelZReader(const std::string& filePath);
-    ~BelZReader();
-    BelZReader(const BelZReader&) = delete;
-    BelZReader& operator=(const BelZReader&) = delete;
-    BelZReader(BelZReader&& other) noexcept;
-    BelZReader& operator=(BelZReader&& other) noexcept;
     void ReadBatch(Batch& batch);
     void ReadBatch(Batch& batch , const std::vector<std::string>& column_names);
     void ScanBatch(size_t index , Batch& batch);
@@ -28,7 +21,10 @@ public:
         auto result = std::make_shared<ColumnT>();
         if (size > 0) {
             result->Resize(size);
-            ReadBytes(result->Data(), size * sizeof(ValueT));
+            stream_.read(reinterpret_cast<char*>(result->Data()), size * sizeof(ValueT));
+            if (!stream_) {
+                throw std::runtime_error("Failed to read fixed-width column block!");
+            }
         }
         return result;
     }
@@ -51,25 +47,9 @@ public:
     size_t RowsCount() const;
     bool Empty() const;
 private:
-    void OpenMmap(const std::string& filePath);
-    void CloseMmap() noexcept;
-    void Seek(size_t offset);
-    void ReadBytes(void* out , size_t size);
-    const uint8_t* ReadBytesView(size_t size);
-
-    template <typename T>
-    T ReadPod() {
-        T result{};
-        ReadBytes(&result , sizeof(result));
-        return result;
-    }
-
     MetaData meta_;
     Scheme scheme_;
     size_t batches_left_ = 0;
     size_t index_of_batch = 0;
-    int fd_ = -1;
-    const uint8_t* mapped_data_ = nullptr;
-    size_t mapped_size_ = 0;
-    size_t offset_ = 0;
+    std::ifstream stream_;
 };
