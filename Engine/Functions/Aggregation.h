@@ -36,11 +36,7 @@ namespace Aggregation {
         virtual ColumnType FinalType() const = 0;
     };
 
-    template <
-        typename ValueT,
-        typename InputColumnT,
-        typename OutputColumnT,
-        template <typename> typename OperatorT>
+    template <typename ValueT, typename InputColumnT, typename OutputColumnT, template <typename> typename OperatorT>
     class TypedAggregationState : public AggregationState {
     public:
         explicit TypedAggregationState()

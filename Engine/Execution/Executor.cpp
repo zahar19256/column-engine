@@ -1,4 +1,5 @@
 #include "Executor.h"
+#include "Functions/Aggregation.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -133,7 +134,7 @@ bool GroupByAggregationExecutor::Next(Batch& data) {
         }
         std::vector<std::shared_ptr<Column>> aggregate_columns;
         aggregate_columns.reserve(calls_.size());
-        for (const auto& call : calls_) {
+        for (const AggregationCall& call : calls_) {
             aggregate_columns.push_back(call.expression ? call.expression->EvalBatch(input) : nullptr);
         }
 
@@ -257,20 +258,20 @@ bool LimitExecutor::Next(Batch& data) {
         if (data.GetMsk().count() != data.GetRows()) {
             throw std::runtime_error("LimitExecutor input batch has not full mask!");
         }
-        const size_t rows = data.GetRows();
+        size_t rows = data.GetRows();
         if (skipped_ + rows <= offset_) {
             skipped_ += rows;
             continue;
         }
-        const size_t drop_front = skipped_ < offset_ ? offset_ - skipped_ : 0;
+        size_t drop_front = skipped_ < offset_ ? offset_ - skipped_ : 0;
         skipped_ += drop_front;
-        const size_t available = rows - drop_front;
-        const size_t need = limit_ - gived_;
-        const size_t take = std::min(available , need);
+        size_t available = rows - drop_front;
+        size_t need = limit_ - gived_;
+        size_t take = std::min(available , need);
         if (take == 0) {
             return false;
         }
-        const size_t drop_back = available - take;
+        size_t drop_back = available - take;
         Batch result;
         result.SetScheme(data.GetScheme());
         for (size_t column_index = 0; column_index < data.Size(); ++column_index) {
