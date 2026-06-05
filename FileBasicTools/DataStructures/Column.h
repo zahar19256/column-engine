@@ -1,4 +1,5 @@
 #pragma once
+#include "GermanString.h"
 #include "Scheme.h"
 #include "Types.h"
 #include "Utility.h"
@@ -28,123 +29,50 @@ class StringColumn : public Column {
 public:
     using ValueType = std::string;
     void Reserve(size_t n) override {
-        offsets_.reserve(n);
+        data_.reserve(n);
     }
     void Resize(size_t n) override {
-        const size_t old_size = offsets_.size();
-        offsets_.resize(n);
-        for (size_t i = old_size; i < n; ++i) {
-            offsets_[i] = data_.size();
-        }
+        data_.resize(n , {});
     }
     ColumnType GetType() const override {
         return ColumnType::String;
     }
     Utility::ScalarValue GetScalarValue(size_t index) const override {
-        return std::string(At(index));
+        return At(index);
     }
-    void ReserveOffset(size_t n) {
-        offsets_.reserve(n);
+    void Push_Back(GermanStr&& value) {
+        data_.push_back(value);
     }
-    void ResizeOffset(size_t n) {
-        offsets_.resize(n);
+    void Push_Back(const GermanStr& value) {
+        data_.push_back(value);
     }
-    void ReserveData(size_t n) {
-        data_.reserve(n);
-    }
-    void ResizeData(size_t n) {
-        data_.resize(n);
-    }
-    void AppendFromString(const char* start , size_t size) override {
-        data_.append(start , size);
-        offsets_.push_back(data_.size());
-    }
-    void AppendFromString(const std::string& val) {
-        data_.append(val);
-        offsets_.push_back(data_.size());
-    }
-    void AppendFromRow(const char* data , size_t size) {
-        data_.append(data , size);
-        offsets_.push_back(data_.size());
-    }
-    void Push_Back(std::string&& value) {
-        data_.append(std::move(value));
-        offsets_.push_back(data_.size());
-    }
-    void Push_Back(const std::string& value) {
-        data_.append(value);
-        offsets_.push_back(data_.size());
-    }
-    void Assign(size_t n , const std::string& value) {
+    void Assign(size_t n , const GermanStr& value) {
         Clear();
-        data_.reserve(value.size() * n);
-        offsets_.reserve(n);
-        for (size_t i = 0; i < n; ++i) {
-            Push_Back(value);
-        }
+        data_.assign(n , value);
     }
-    char* GetDataPointer() {
+    GermanStr* Data() {
         return data_.data();
     }
-    const std::string& GetData() const {
-        return data_;
-    }
-    size_t GetDataSize() const {
-        return data_.size();
-    }
-    std::string_view At(size_t index) const {
-        if (index >= offsets_.size()) {
+    const GermanStr& At(size_t index) const {
+        if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range!");
         }
-        size_t start = index == 0 ? 0 : offsets_[index - 1];
-        size_t end = offsets_[index];
-        return std::string_view(data_.data() + start, end - start);
+        return data_[index];
     }
-    std::string operator[](size_t index) {
-        if (index >= offsets_.size()) {
+    GermanStr operator[](size_t index) {
+        if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }
-        size_t size = offsets_[index];
-        size_t start = 0;
-        if (index > 0) {
-            size -= offsets_[index - 1];
-            start = offsets_[index - 1];
-        }
-        return data_.substr(start , size);
-    }
-    size_t* GetOffsetPointer() {
-        return offsets_.data();
-    }
-    const char* GetStringPointer(size_t index) const {
-        if (index >= offsets_.size()) {
-            throw std::runtime_error("Index is out of StringColumn range");
-        }
-        size_t start = 0;
-        if (index > 0) {
-            start = offsets_[index - 1];
-        }
-        return data_.data() + start;
-    }
-    size_t GetStringSize(size_t index) const {
-        if (index >= offsets_.size()) {
-            throw std::runtime_error("Index is out of StringColumn range");
-        }
-        size_t size = offsets_[index];
-        if (index > 0) {
-            size -= offsets_[index - 1];
-        }
-        return size;
+        return data_[index];
     }
     size_t Size() const noexcept override {
-        return offsets_.size();
+        return data_.size();
     }
     void Clear() noexcept override {
         data_.clear();
-        offsets_.clear();
     }
 private:
-    std::string data_;
-    std::vector<size_t> offsets_;
+    std::vector<GermanStr> data_;
 };
 
 class Int64Column : public Column {

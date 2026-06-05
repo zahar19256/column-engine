@@ -9,11 +9,12 @@
 #include <utility>
 #include <unordered_map>
 #include <variant>
+#include "GermanString.h"
 
 namespace Utility {
 
 using Element_view = std::variant<int64_t , std::string_view , double>;
-using ScalarValue = std::variant<int64_t , std::string , double , __int128_t>;
+using ScalarValue = std::variant<int64_t , GermanStr , double , __int128_t>;
 using GroupKey = std::vector<ScalarValue>;
 
 class StringArena {

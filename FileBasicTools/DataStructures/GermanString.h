@@ -3,9 +3,12 @@
 #include <cstring>
 #include <algorithm>
 
-class MyString {
+class GermanStr {
 public:
-    MyString(const char* start , size_t size) {
+    GermanStr() {
+        low_ = 0 , high_ = 0;
+    }
+    GermanStr(const char* start , size_t size) {
         if (size <= 12) {
             high_ = static_cast<uint32_t>(size);
             low_ = 0;
@@ -18,7 +21,13 @@ public:
         }
     }
 
-    inline bool operator>(const MyString& other) const noexcept {
+    GermanStr(GermanStr&& other) : high_(std::move(other.high_)) , low_(std::move(other.low_)) {
+    }
+    GermanStr(const GermanStr& other) = default;
+
+    GermanStr& operator=(const GermanStr& other) = default;
+
+    inline bool operator>(const GermanStr& other) const noexcept {
         size_t size = Size();
         size_t other_size = other.Size();
         size_t mn_size = std::min(size , other_size);
@@ -45,7 +54,7 @@ public:
         }
         return size > other_size;
     }
-    inline bool operator<=(const MyString& other) const noexcept {
+    inline bool operator<=(const GermanStr& other) const noexcept {
         size_t size = Size();
         size_t other_size = other.Size();
         size_t mn_size = std::min(size , other_size);
@@ -72,7 +81,7 @@ public:
         }
         return size <= other_size;
     }
-    inline bool operator>=(const MyString& other) const noexcept {
+    inline bool operator>=(const GermanStr& other) const noexcept {
         size_t size = Size();
         size_t other_size = other.Size();
         size_t mn_size = std::min(size , other_size);
@@ -99,7 +108,7 @@ public:
         }
         return size >= other_size;
     }
-    inline bool operator==(const MyString& other) const noexcept {
+    inline bool operator==(const GermanStr& other) const noexcept {
         if (high_ != other.high_) {
             return false;
         }
@@ -112,7 +121,7 @@ public:
         }
         return memcmp(Data() , other.Data() , sz) == 0;
     }
-    inline bool operator<(const MyString& other) const noexcept {
+    inline bool operator<(const GermanStr& other) const noexcept {
         size_t size = Size();
         size_t other_size = other.Size();
         size_t mn_size = std::min(size , other_size);
