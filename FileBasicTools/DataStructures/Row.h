@@ -5,7 +5,6 @@
 #include <memory.h>
 #include <stdexcept>
 #include <error.h>
-#include <iostream>
 class StringBacket {
 public:
     void SetOffsets(std::vector<size_t>& source_offset) {
