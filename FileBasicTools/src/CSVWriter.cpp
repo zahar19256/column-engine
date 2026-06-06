@@ -1,7 +1,5 @@
 #include "CSVWriter.h"
 #include "Column.h"
-
-#include <algorithm>
 #include <array>
 #include <charconv>
 #include <filesystem>

@@ -9,7 +9,6 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
-#include <unordered_map>
 #include <variant>
 #include "GermanString.h"
 

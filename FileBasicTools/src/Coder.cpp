@@ -1,11 +1,15 @@
 #include "Coder.h"
-#include <unordered_map>
+#include <absl/container/flat_hash_map.h>
 
 void Dictionary::Apply(std::shared_ptr<FlatStringColumn> col, EncodedColumn &result) {
-    const size_t col_size = col->Size();
+    if (!col || col->Size() == 0) {
+        throw std::runtime_error("Empty/Null column in Dictionary::Apply!");
+    }
 
+    const size_t col_size = col->Size();
     size_t last = 0;
-    std::unordered_map<std::string_view, int16_t> dictionary;
+    
+    absl::flat_hash_map<std::string_view, int16_t> dictionary;
     dictionary.reserve(col_size); 
 
     std::vector<int32_t> offset;
@@ -22,11 +26,17 @@ void Dictionary::Apply(std::shared_ptr<FlatStringColumn> col, EncodedColumn &res
     for (size_t i = 0; i < col_size; ++i) {
         std::string_view current_str = col->At(i); 
         auto [it, inserted] = dictionary.try_emplace(current_str, static_cast<int16_t>(last));
+        
         if (inserted) {
+            if (last > 32767) {
+                throw std::runtime_error("Dictionary capacity exceeded for int16_t!");
+            }
             index.push_back(static_cast<int16_t>(last));
             unique_string.push_back(current_str);
-            int32_t current_offset = (last == 0) ? current_str.size() : offset.back() + current_str.size();
+            
+            int32_t current_offset = (last == 0) ? static_cast<int32_t>(current_str.size()) : offset.back() + static_cast<int32_t>(current_str.size());
             offset.push_back(current_offset);
+            
             total_strings_length += current_str.size();
             last++;
         } else {
@@ -35,21 +45,29 @@ void Dictionary::Apply(std::shared_ptr<FlatStringColumn> col, EncodedColumn &res
     }
 
     int16_t offset_sz = static_cast<int16_t>(last);
-    size_t total_size = sizeof(int16_t) + (sizeof(int32_t) * last) +  total_strings_length + (sizeof(int16_t) * col_size);
+    size_t total_size = sizeof(int16_t) + (sizeof(int32_t) * last) + total_strings_length + (sizeof(int16_t) * col_size);
 
-    std::vector<uint8_t> data;
-    data.resize(total_size);
+    std::vector<uint8_t> data(total_size);
     uint8_t* ptr = data.data();
+    
     memcpy(ptr, &offset_sz, sizeof(int16_t));
     ptr += sizeof(int16_t);
-    memcpy(ptr, offset.data(), sizeof(int32_t) * last);
-    ptr += sizeof(int32_t) * last;
+    
+    if (last > 0) {
+        memcpy(ptr, offset.data(), sizeof(int32_t) * last);
+        ptr += sizeof(int32_t) * last;
+    }
+    
     for (size_t i = 0; i < last; ++i) {
         size_t sz = unique_string[i].size();
-        memcpy(ptr, unique_string[i].data(), sz);
-        ptr += sz;
+        if (sz > 0) {
+            memcpy(ptr, unique_string[i].data(), sz);
+            ptr += sz;
+        }
     }
+    
     memcpy(ptr, index.data(), sizeof(int16_t) * col_size);
+
     result.data = std::move(data);
     result.codec = CodecType::Diction;
 }
