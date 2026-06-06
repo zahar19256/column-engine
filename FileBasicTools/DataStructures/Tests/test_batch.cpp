@@ -94,8 +94,8 @@ TEST(BatchTest, ConstructorFromChunk_MixedTypes) {
     auto strCol = As<StringColumn>(col1);
     ASSERT_NE(strCol, nullptr) << "Column 1 should be StringColumn";
     ASSERT_EQ(strCol->Size(), 2);
-    EXPECT_EQ((*strCol)[0], "Alice");
-    EXPECT_EQ((*strCol)[1], "Bob");
+    EXPECT_EQ(strCol->At_view(0), "Alice");
+    EXPECT_EQ(strCol->At_view(1), "Bob");
 }
 
 // 4. Тест парсинга некорректных данных

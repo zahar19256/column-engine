@@ -34,7 +34,7 @@ struct EncodedColumn {
 namespace Raw {
     template <typename T , typename ColumnT , typename = void>
     void Apply(std::shared_ptr<ColumnT> col , EncodedColumn& result) {
-        if constexpr (std::same_as<ColumnT , StringColumn>) {
+        if constexpr (std::same_as<ColumnT , FlatStringColumn>) {
             size_t data_sz = col->GetDataSize();
             size_t offset_sz = col->Size();
             result.data.resize(offset_sz * sizeof(size_t) + data_sz + 2 * sizeof(size_t));
@@ -47,9 +47,13 @@ namespace Raw {
             pos += data_sz;
             memcpy(result.data.data() + pos , col->GetOffsetPointer() , offset_sz * sizeof(size_t));
         } else {
-            const T* data = col->Data();
-            result.data.resize(sizeof(T) * col->Size());
-            memcpy(result.data.data() , data , sizeof(T) * col->Size());
+            if constexpr (std::same_as<ColumnT , StringColumn>) {
+                throw std::runtime_error("StringColumn in coder.h!");
+            } else {
+                const T* data = col->Data();
+                result.data.resize(sizeof(T) * col->Size());
+                memcpy(result.data.data() , data , sizeof(T) * col->Size());
+            }
         }
         result.codec = CodecType::Raw;
     }
@@ -82,6 +86,9 @@ namespace Raw {
                 return;
             case ColumnType::Int128:
                 Apply<__int128_t>(As<Int128Column>(col) , result);
+                return;
+            case ColumnType::FlatString:
+                Apply<FlatStringColumn>(As<FlatStringColumn>(col) , result);
                 return;
             case ColumnType::String:
                 Apply<StringColumn>(As<StringColumn>(col) , result);
@@ -218,7 +225,7 @@ namespace BitPack {
 } // BitPack
 
 namespace Dictionary {
-    void Apply(std::shared_ptr<StringColumn> col , EncodedColumn& result);
+    void Apply(std::shared_ptr<FlatStringColumn> col , EncodedColumn& result);
 } // Dictionary
 
 

@@ -80,44 +80,47 @@ TEST(Int64ColumnTest, RawPointerAccess) {
 // ==========================================
 
 TEST(StringColumnTest, BasicOperations) {
-    StringColumn col;
+    Utility::StringArena arena;
+    StringColumn col(&arena);
     col.Reserve(100);
     EXPECT_EQ(col.Size(), 0);
     
     std::string s = "lvalue";
-    col.Push_Back(s);           // lvalue version
-    col.Push_Back("rvalue");    // rvalue version
+    col.AppendFromString(s.data() , s.size());
+    col.AppendFromString("rvalue" , 6);
     
     ASSERT_EQ(col.Size(), 2);
-    EXPECT_EQ(col[0], "lvalue");
-    EXPECT_EQ(col[1], "rvalue");
+    EXPECT_EQ(col.At_view(0), "lvalue");
+    EXPECT_EQ(col.At_view(1), "rvalue");
 }
 
-TEST(StringColumnTest, ResizeStorageForRawRead) {
-    StringColumn col;
+TEST(StringColumnTest, AppendLongStringUsesArena) {
+    Utility::StringArena arena;
+    StringColumn col(&arena);
 
-    col.ResizeData(5);
-    memcpy(col.GetDataPointer() , "hello" , 5);
-    col.ResizeOffset(1);
-    col.GetOffsetPointer()[0] = 5;
-
+    std::string value = "long-string-value";
+    col.AppendFromString(value.data() , value.size());
+    
     ASSERT_EQ(col.Size(), 1);
-    EXPECT_EQ(col[0], "hello");
+    EXPECT_EQ(col.At_view(0), value);
+    EXPECT_GT(arena.MemoryUsed(), 0);
 }
 
 TEST(StringColumnTest, AppendFromString) {
-    StringColumn col;
-    col.AppendFromString("hello");
-    col.AppendFromString("world");
+    Utility::StringArena arena;
+    StringColumn col(&arena);
+    col.AppendFromString("hello" , 5);
+    col.AppendFromString("world" , 5);
     
     ASSERT_EQ(col.Size(), 2);
-    EXPECT_EQ(col[0], "hello");
-    EXPECT_EQ(col[1], "world");
+    EXPECT_EQ(col.At_view(0), "hello");
+    EXPECT_EQ(col.At_view(1), "world");
 }
 
 TEST(StringColumnTest, OutOfBounds) {
-    StringColumn col;
-    col.Push_Back("test");
+    Utility::StringArena arena;
+    StringColumn col(&arena);
+    col.AppendFromString("test" , 4);
     
     EXPECT_THROW(col[1], std::runtime_error);
 }
@@ -127,9 +130,10 @@ TEST(StringColumnTest, OutOfBounds) {
 // ==========================================
 
 TEST(ColumnUtilsTest, IsCheck) {
+    Utility::StringArena arena;
     // Создаем Int64Column, но храним как базовый указатель
     std::shared_ptr<Column> intCol = std::make_shared<Int64Column>();
-    std::shared_ptr<Column> strCol = std::make_shared<StringColumn>();
+    std::shared_ptr<Column> strCol = std::make_shared<StringColumn>(&arena);
     
     // Проверяем IntCol
     EXPECT_TRUE(Is<Int64Column>(intCol));
@@ -157,11 +161,12 @@ TEST(ColumnUtilsTest, AsCast) {
 }
 
 TEST(ColumnUtilsTest, Polymorphism) {
+    Utility::StringArena arena;
     // Проверка работы через виртуальные методы
     std::vector<std::shared_ptr<Column>> columns;
     
     columns.push_back(std::make_shared<Int64Column>());
-    columns.push_back(std::make_shared<StringColumn>());
+    columns.push_back(std::make_shared<StringColumn>(&arena));
     
     // Вызываем виртуальный AppendFromString
     std::string s1 = "100";
@@ -171,22 +176,23 @@ TEST(ColumnUtilsTest, Polymorphism) {
     
     // Проверяем результат через каст (так как оператор [] не виртуальный)
     EXPECT_EQ((*As<Int64Column>(columns[0]))[0], 100);
-    EXPECT_EQ((*As<StringColumn>(columns[1]))[0], "text");
+    EXPECT_EQ(As<StringColumn>(columns[1])->At_view(0), "text");
 }
 
 TEST(ColumnUtilsTest, GetScalarValue) {
+    Utility::StringArena arena;
     std::shared_ptr<Column> int16_col = std::make_shared<Int16Column>();
-    std::shared_ptr<Column> string_col = std::make_shared<StringColumn>();
+    std::shared_ptr<Column> string_col = std::make_shared<StringColumn>(&arena);
     std::shared_ptr<Column> double_col = std::make_shared<DoubleColumn>();
     std::shared_ptr<Column> int128_col = std::make_shared<Int128Column>();
 
     As<Int16Column>(int16_col)->Push_Back(42);
-    As<StringColumn>(string_col)->Push_Back("key");
+    As<StringColumn>(string_col)->AppendFromString("key" , 3);
     As<DoubleColumn>(double_col)->Push_Back(3.5);
     As<Int128Column>(int128_col)->Push_Back(static_cast<__int128_t>(1) << 80);
 
     EXPECT_EQ(std::get<int64_t>(int16_col->GetScalarValue(0)), 42);
-    EXPECT_EQ(std::get<std::string>(string_col->GetScalarValue(0)), "key");
+    EXPECT_EQ(std::get<GermanStr>(string_col->GetScalarValue(0)).View(), "key");
     EXPECT_DOUBLE_EQ(std::get<double>(double_col->GetScalarValue(0)), 3.5);
     EXPECT_EQ(std::get<__int128_t>(int128_col->GetScalarValue(0)), static_cast<__int128_t>(1) << 80);
 }

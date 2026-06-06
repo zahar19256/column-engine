@@ -1,58 +1,66 @@
 #include "Coder.h"
 #include <unordered_map>
 
-void Dictionary::Apply(std::shared_ptr<StringColumn> col, EncodedColumn &result) {
-    if (!col || col->Size() == 0) {
-        throw std::runtime_error("Empty/Null column in Dictionary::Apply!");
-    }
+void Dictionary::Apply(std::shared_ptr<FlatStringColumn> col, EncodedColumn &result) {
+    const size_t col_size = col->Size();
+
     size_t last = 0;
-    std::unordered_map<std::string_view , size_t> dictionary;
-    dictionary.reserve(col->Size());
+    std::unordered_map<std::string_view, int16_t> dictionary;
+    dictionary.reserve(col_size); 
+
     std::vector<int32_t> offset;
     std::vector<int16_t> index;
     std::vector<std::string_view> unique_string;
-    unique_string.reserve(col->Size());
-    index.reserve(col->Size());
-    for (size_t i = 0; i < col->Size(); ++i) {
-        if (dictionary.count(col->At(i))) {
-            index.push_back(dictionary[col->At(i)]);
-            continue;
+
+    index.reserve(col_size);
+    size_t expected_unique = std::min<size_t>(8192, col_size); 
+    unique_string.reserve(expected_unique);
+    offset.reserve(expected_unique);
+
+    size_t total_strings_length = 0;
+
+    for (size_t i = 0; i < col_size; ++i) {
+        std::string_view current_str = col->At(i); 
+        auto [it, inserted] = dictionary.try_emplace(current_str, static_cast<int16_t>(last));
+        if (inserted) {
+            index.push_back(static_cast<int16_t>(last));
+            unique_string.push_back(current_str);
+            int32_t current_offset = (last == 0) ? current_str.size() : offset.back() + current_str.size();
+            offset.push_back(current_offset);
+            total_strings_length += current_str.size();
+            last++;
+        } else {
+            index.push_back(it->second);
         }
-        index.push_back(last);
-        unique_string.push_back(col->At(i));
-        dictionary[col->At(i)] = last++;
     }
-    offset.resize(last);
-    offset[0] = unique_string[0].size();
-    for (size_t i = 1; i < last; ++i) {
-        offset[i] = offset[i - 1] + unique_string[i].size();
-    }
+
+    int16_t offset_sz = static_cast<int16_t>(last);
+    size_t total_size = sizeof(int16_t) + (sizeof(int32_t) * last) +  total_strings_length + (sizeof(int16_t) * col_size);
+
     std::vector<uint8_t> data;
-    int16_t offset_sz = unique_string.size();
-    size_t total_size = sizeof(int16_t) + sizeof(int32_t) * offset.size() + offset.back() + sizeof(int16_t) * index.size();
     data.resize(total_size);
-    size_t pos = 0;
-    memcpy(data.data() + pos , &offset_sz , sizeof(int16_t));
-    pos += sizeof(int16_t);
-    memcpy(data.data() + pos , offset.data() , sizeof(int32_t) * last);
-    pos += last * sizeof(int32_t);
+    uint8_t* ptr = data.data();
+    memcpy(ptr, &offset_sz, sizeof(int16_t));
+    ptr += sizeof(int16_t);
+    memcpy(ptr, offset.data(), sizeof(int32_t) * last);
+    ptr += sizeof(int32_t) * last;
     for (size_t i = 0; i < last; ++i) {
-        memcpy(data.data() + pos , unique_string[i].data() , unique_string[i].size());
-        pos += unique_string[i].size();
+        size_t sz = unique_string[i].size();
+        memcpy(ptr, unique_string[i].data(), sz);
+        ptr += sz;
     }
-    memcpy(data.data() + pos , index.data() , sizeof(int16_t) * index.size());
+    memcpy(ptr, index.data(), sizeof(int16_t) * col_size);
     result.data = std::move(data);
     result.codec = CodecType::Diction;
 }
 
-
 EncodedColumn GetBestCompression(std::shared_ptr<Column> col) {
     switch(col->GetType()) {
-        case ColumnType::String: {
+        case ColumnType::FlatString: {
             EncodedColumn raw_encode;
             EncodedColumn dic_encode;
-            Raw::Apply<StringColumn>(As<StringColumn>(col) , raw_encode);
-            Dictionary::Apply(As<StringColumn>(col) , dic_encode);
+            Raw::Apply<FlatStringColumn>(As<FlatStringColumn>(col) , raw_encode);
+            Dictionary::Apply(As<FlatStringColumn>(col) , dic_encode);
             if (dic_encode.data.size() < raw_encode.data.size()) {
                 return dic_encode;
             } else {

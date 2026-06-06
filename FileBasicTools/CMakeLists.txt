@@ -20,6 +20,8 @@ set(DATASTRUCT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/Scheme.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/MetaData.h
     ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/MetaData.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/GermanString.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/GermanString.cpp
 )
 
 add_library(data_structures ${DATASTRUCT_SOURCES})
@@ -109,7 +111,6 @@ if(FILE_BASIC_TOOLS_BUILD_TESTS)
             GTest::gtest
             GTest::gtest_main
     )
-
 
     add_test(NAME test_src COMMAND test_src)
     add_test(NAME test_bench COMMAND test_bench)

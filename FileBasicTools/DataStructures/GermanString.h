@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <cstring>
 #include <algorithm>
+#include <string.h>
+#include <string_view>
 
 class GermanStr {
 public:
@@ -153,6 +155,14 @@ public:
     const char* Data() const noexcept;
     uint32_t GetPref() const noexcept;
 
+    std::string_view View() const {
+        size_t sz = Size();
+        if (sz <= 12) {
+            return std::string_view(reinterpret_cast<const char*>(this) + 4 , sz);
+        } else {
+            return std::string_view(reinterpret_cast<const char*>(low_) , sz);
+        }
+    }
 
 private:
     uint64_t high_;

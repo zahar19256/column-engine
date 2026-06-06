@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
+#include <cstddef>
 
 static std::string TypeInt8 = "int8";
 static std::string TypeInt16 = "int16";
@@ -25,6 +26,7 @@ enum class ColumnType : int8_t {
     Timestamp = 7,
     Unknown = 8,
     Int128 = 9,
+    FlatString = 10,
 };
 
 struct SchemeNode {

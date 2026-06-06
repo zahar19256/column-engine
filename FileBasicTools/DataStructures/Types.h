@@ -91,16 +91,7 @@ namespace Data {
     inline T ParseInteger(const char* start , size_t size) {
         T result = 0;
         const char* end = start + size;
-        auto [ptr , err] = std::from_chars(start , end , result);
-        if (err == std::errc::invalid_argument || ptr != end) {
-            throw std::invalid_argument("Can't parse integer from string!");
-        }
-        if (err == std::errc::result_out_of_range) {
-            throw std::out_of_range("Integer value is out of range!");
-        }
-        if (err != std::errc()) {
-            throw std::runtime_error("Unknown integer parse error!");
-        }
+        std::from_chars(start , end , result);
         return result;
     }
 
@@ -111,10 +102,7 @@ namespace Data {
 
     inline double ParseDouble(const std::string& val) {
         double result = 0;
-        auto [ptr , err] = std::from_chars(val.data(), val.data() + val.size(), result);
-        if (err != std::errc() || ptr != val.data() + val.size()) {
-            throw std::runtime_error("Cannot parse double from string!");
-        }
+        std::from_chars(val.data(), val.data() + val.size(), result);
         return result;
     }
 
@@ -212,7 +200,7 @@ namespace Data {
                 return ParseDate(val);
             case ColumnType::Timestamp:
                 return ParseTimestamp(val);
-            case ColumnType::Unknown:
+            default:
                 throw std::runtime_error("Unknown type for filter value!");
         }
         throw std::runtime_error("Unsupported type for filter value!");

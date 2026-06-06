@@ -12,7 +12,7 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
         return;
     }
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column));
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column) , &string_arena_);
         if (scheme_.GetType(column) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(column) + " type!");
         }
@@ -27,7 +27,7 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
 void Batch::Init() {
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i));
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i) , &string_arena_);
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -35,11 +35,15 @@ void Batch::Init() {
     }
 }
 
-void Batch::Init(const Scheme& scheme) {
+void Batch::Init(const Scheme& scheme , bool convert) {
     scheme_ = scheme;
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i));
+        ColumnType type = scheme_.GetType(i);
+        if (convert && type == ColumnType::String) {
+            type = ColumnType::FlatString;
+        }
+        std::shared_ptr<Column> storage = MakeColumn(type , &string_arena_);
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -115,6 +119,10 @@ const boost::dynamic_bitset<>& Batch::GetMsk() const {
     return mask_;
 }
 
+Utility::StringArena* Batch::GetStringArena() {
+    return &string_arena_;
+}
+
 const Scheme& Batch::GetScheme() const {
     return scheme_;
 }
@@ -129,6 +137,7 @@ bool Batch::Empty() const {
 
 void Batch::Clear() {
     data_.clear();
+    string_arena_.Clear();
     scheme_.Clear();
     mask_.clear();
     has_mask_ = false;
@@ -139,6 +148,7 @@ void Batch::Reset() {
     for (size_t i = 0; i < scheme_.Size(); ++i) {
         data_[i]->Clear();
     }
+    string_arena_.Clear();
     rows_ = 0;
 }
 

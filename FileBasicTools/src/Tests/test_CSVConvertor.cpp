@@ -81,8 +81,8 @@ TEST_F(CSVConvertorTest, EndToEnd_TranspositionCheck) {
 
     EXPECT_EQ((*ids)[0], 10);
     EXPECT_EQ((*ids)[1], 20);
-    EXPECT_EQ((*names)[0], "Alice");
-    EXPECT_EQ((*names)[1], "Bob");
+    EXPECT_EQ(names->At_view(0), "Alice");
+    EXPECT_EQ(names->At_view(1), "Bob");
 }
 
 // Тест на случай, если файла схемы нет

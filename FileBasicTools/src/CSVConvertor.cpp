@@ -52,7 +52,7 @@ void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::str
     GetScheme(SchemeFilePath);
     BelZWriter writer(CSVFilePath , outputFilePath);
     size_t col_count = scheme_.Size();
-    chunk_.Init(scheme_);
+    chunk_.Init(scheme_ , true);
     meta_.SetScheme(std::move(scheme_));
     while (GetChunk(scan_)) {
         size_t rows_in_chunk = chunk_.GetRows();

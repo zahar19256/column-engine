@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <memory.h>
+#include <optional>
 
 class Column {
 public:
@@ -28,6 +29,9 @@ public:
 class StringColumn : public Column {
 public:
     using ValueType = std::string;
+    explicit StringColumn(Utility::StringArena* arena) : arena_(arena) {
+
+    }
     void Reserve(size_t n) override {
         data_.reserve(n);
     }
@@ -36,6 +40,14 @@ public:
     }
     ColumnType GetType() const override {
         return ColumnType::String;
+    }
+    void AppendFromString(const char* data , size_t size) override {
+        if (size <= 12) {
+            data_.emplace_back(data , size);
+            return;
+        }
+        std::string_view now = arena_->Add(std::string_view(data , size));
+        data_.emplace_back(now.data() , now.size());
     }
     Utility::ScalarValue GetScalarValue(size_t index) const override {
         return At(index);
@@ -46,6 +58,11 @@ public:
     void Push_Back(const GermanStr& value) {
         data_.push_back(value);
     }
+    template <typename... Args>
+    GermanStr& Emplace_Back(Args&&... args) {
+        return data_.emplace_back(std::forward<Args>(args)...);
+    }
+
     void Assign(size_t n , const GermanStr& value) {
         Clear();
         data_.assign(n , value);
@@ -53,11 +70,17 @@ public:
     GermanStr* Data() {
         return data_.data();
     }
-    const GermanStr& At(size_t index) const {
+    GermanStr At(size_t index) const {
         if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range!");
         }
         return data_[index];
+    }
+    std::string_view At_view(size_t index) const {
+        if (index >= data_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range!");
+        }
+        return data_[index].View();
     }
     GermanStr operator[](size_t index) {
         if (index >= data_.size()) {
@@ -73,6 +96,131 @@ public:
     }
 private:
     std::vector<GermanStr> data_;
+    Utility::StringArena* arena_;
+};
+
+class FlatStringColumn : public Column {
+public:
+    using ValueType = std::string;
+    void Reserve(size_t n) override {
+        offsets_.reserve(n);
+    }
+    void Resize(size_t n) override {
+        const size_t old_size = offsets_.size();
+        offsets_.resize(n);
+        for (size_t i = old_size; i < n; ++i) {
+            offsets_[i] = data_.size();
+        }
+    }
+    Utility::ScalarValue GetScalarValue(size_t index) const override {
+        std::string_view now = At(index);
+        return GermanStr(now.data() , now.size());
+    }
+    ColumnType GetType() const override {
+        return ColumnType::FlatString;
+    }
+    void ReserveOffset(size_t n) {
+        offsets_.reserve(n);
+    }
+    void ResizeOffset(size_t n) {
+        offsets_.resize(n);
+    }
+    void ReserveData(size_t n) {
+        data_.reserve(n);
+    }
+    void ResizeData(size_t n) {
+        data_.resize(n);
+    }
+    void AppendFromString(const char* start , size_t size) override {
+        data_.append(start , size);
+        offsets_.push_back(data_.size());
+    }
+    void AppendFromString(const std::string& val) {
+        data_.append(val);
+        offsets_.push_back(data_.size());
+    }
+    void AppendFromRow(const char* data , size_t size) {
+        data_.append(data , size);
+        offsets_.push_back(data_.size());
+    }
+    void Push_Back(std::string&& value) {
+        data_.append(std::move(value));
+        offsets_.push_back(data_.size());
+    }
+    void Push_Back(const std::string& value) {
+        data_.append(value);
+        offsets_.push_back(data_.size());
+    }
+    void Assign(size_t n , const std::string& value) {
+        Clear();
+        data_.reserve(value.size() * n);
+        offsets_.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+            Push_Back(value);
+        }
+    }
+    char* GetDataPointer() {
+        return data_.data();
+    }
+    const std::string& GetData() const {
+        return data_;
+    }
+    size_t GetDataSize() const {
+        return data_.size();
+    }
+    std::string_view At(size_t index) const {
+        if (index >= offsets_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range!");
+        }
+        size_t start = index == 0 ? 0 : offsets_[index - 1];
+        size_t end = offsets_[index];
+        return std::string_view(data_.data() + start, end - start);
+    }
+    std::string operator[](size_t index) {
+        if (index >= offsets_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range");
+        }
+        size_t size = offsets_[index];
+        size_t start = 0;
+        if (index > 0) {
+            size -= offsets_[index - 1];
+            start = offsets_[index - 1];
+        }
+        return data_.substr(start , size);
+    }
+    size_t* GetOffsetPointer() {
+        return offsets_.data();
+    }
+    const char* GetStringPointer(size_t index) const {
+        if (index >= offsets_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range");
+        }
+        size_t start = 0;
+        if (index > 0) {
+            start = offsets_[index - 1];
+        }
+        return data_.data() + start;
+    }
+    size_t GetStringSize(size_t index) const {
+        if (index >= offsets_.size()) {
+            throw std::runtime_error("Index is out of StringColumn range");
+        }
+        size_t size = offsets_[index];
+        if (index > 0) {
+            size -= offsets_[index - 1];
+        }
+        return size;
+    }
+    size_t Size() const noexcept override {
+        return offsets_.size();
+    }
+    void Clear() noexcept override {
+        data_.clear();
+        offsets_.clear();
+    }
+private:
+    std::string data_;
+    std::vector<size_t> offsets_;
 };
 
 class Int64Column : public Column {
@@ -527,7 +675,7 @@ private:
     std::vector<int64_t> data_;
 };
 
-inline std::shared_ptr<Column> MakeColumn(ColumnType type) {
+inline std::shared_ptr<Column> MakeColumn(ColumnType type , std::optional<Utility::StringArena*> arena) {
     switch (type) {
         case ColumnType::Int8:
             return std::make_shared<Int8Column>();
@@ -540,7 +688,9 @@ inline std::shared_ptr<Column> MakeColumn(ColumnType type) {
         case ColumnType::Int128:
             return std::make_shared<Int128Column>();
         case ColumnType::String:
-            return std::make_shared<StringColumn>();
+            return std::make_shared<StringColumn>(arena.value());
+        case ColumnType::FlatString:
+            return std::make_shared<FlatStringColumn>();
         case ColumnType::Double:
             return std::make_shared<DoubleColumn>();
         case ColumnType::Date:

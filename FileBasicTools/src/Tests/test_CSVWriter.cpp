@@ -73,15 +73,15 @@ TEST_F(CSVWriterTest, WriteBatch) {
     col1->Push_Back(1);
     col1->Push_Back(2);
 
-    auto col2 = std::make_shared<StringColumn>();
-    col2->Push_Back("Alice");
-    col2->Push_Back("Bob");
-
     Batch batch;
     Scheme scheme;
     scheme.Push_Back({"id", ColumnType::Int64});
     scheme.Push_Back({"name", ColumnType::String});
     batch.SetScheme(scheme);
+
+    auto col2 = std::make_shared<StringColumn>(batch.GetStringArena());
+    col2->AppendFromString("Alice" , 5);
+    col2->AppendFromString("Bob" , 3);
     
     batch.AddColumn(col1);
     batch.AddColumn(col2);
@@ -101,14 +101,14 @@ TEST_F(CSVWriterTest, WriteBatch_ComplexData) {
     auto col1 = std::make_shared<Int64Column>();
     col1->Push_Back(100);
 
-    auto col2 = std::make_shared<StringColumn>();
-    col2->Push_Back("Line1\nLine2,Part3");
-
     Batch batch;
     Scheme scheme;
     scheme.Push_Back({"num", ColumnType::Int64});
     scheme.Push_Back({"text", ColumnType::String});
     batch.SetScheme(scheme);
+
+    auto col2 = std::make_shared<StringColumn>(batch.GetStringArena());
+    col2->AppendFromString("Line1\nLine2,Part3" , 17);
     
     batch.AddColumn(col1);
     batch.AddColumn(col2);
@@ -165,10 +165,6 @@ TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
     double_col->Push_Back(1.25);
     double_col->Push_Back(2.5);
 
-    auto string_col = std::make_shared<StringColumn>();
-    string_col->Push_Back("plain");
-    string_col->Push_Back("quoted,value");
-
     auto date_col = std::make_shared<DateColumn>();
     date_col->Push_Back(Data::ParseDate("2013-07-15"));
     date_col->Push_Back(Data::ParseDate("2013-07-16"));
@@ -189,6 +185,11 @@ TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
     scheme.Push_Back({"date", ColumnType::Date});
     scheme.Push_Back({"ts", ColumnType::Timestamp});
     batch.SetScheme(scheme);
+
+    auto string_col = std::make_shared<StringColumn>(batch.GetStringArena());
+    string_col->AppendFromString("plain" , 5);
+    string_col->AppendFromString("quoted,value" , 12);
+
     batch.AddColumn(int8_col);
     batch.AddColumn(int16_col);
     batch.AddColumn(int32_col);

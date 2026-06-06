@@ -23,8 +23,11 @@ inline std::shared_ptr<Column> DecodeRawFixed(EncodedColumnView column) {
     return result;
 }
 
-inline std::shared_ptr<Column> DecodeRawString(EncodedColumnView column) {
-    auto result = std::make_shared<StringColumn>();
+inline std::shared_ptr<Column> DecodeRawString(EncodedColumnView column , Utility::StringArena* arena) {
+    if (arena == nullptr) {
+        throw std::runtime_error("String arena is required for raw string decoder!");
+    }
+    auto result = std::make_shared<StringColumn>(arena);
     size_t data_sz = 0;
     size_t offset_sz = 0;
     size_t pos = 0;
@@ -32,19 +35,20 @@ inline std::shared_ptr<Column> DecodeRawString(EncodedColumnView column) {
     pos += sizeof(data_sz);
     memcpy(&offset_sz , column.data + pos , sizeof(offset_sz));
     pos += sizeof(offset_sz);
-    result->ResizeData(data_sz);
-    result->ResizeOffset(offset_sz);
-    if (data_sz != 0) {
-        memcpy(result->GetDataPointer() , column.data + pos , data_sz);
-        pos += data_sz;
-    }
-    if (offset_sz != 0) {
-        memcpy(result->GetOffsetPointer() , column.data + pos , offset_sz * sizeof(size_t));
+    const char* string_data = reinterpret_cast<const char*>(column.data + pos);
+    pos += data_sz;
+    const size_t* offsets = reinterpret_cast<const size_t*>(column.data + pos);
+
+    result->Reserve(offset_sz);
+    for (size_t i = 0; i < offset_sz; ++i) {
+        size_t start = i == 0 ? 0 : offsets[i - 1];
+        size_t end = offsets[i];
+        result->AppendFromString(string_data + start , end - start);
     }
     return result;
 }
 
-inline std::shared_ptr<Column> DecodeRaw(EncodedColumnView column , ColumnType type) {
+inline std::shared_ptr<Column> DecodeRaw(EncodedColumnView column , ColumnType type , Utility::StringArena* arena = nullptr) {
     switch(type) {
         case ColumnType::Int8:
             return DecodeRawFixed<int8_t , Int8Column>(column);
@@ -63,16 +67,20 @@ inline std::shared_ptr<Column> DecodeRaw(EncodedColumnView column , ColumnType t
         case ColumnType::Int128:
             return DecodeRawFixed<__int128_t , Int128Column>(column);
         case ColumnType::String:
-            return DecodeRawString(column);
+        case ColumnType::FlatString:
+            return DecodeRawString(column , arena);
         case ColumnType::Unknown:
             break;
     }
     throw std::runtime_error("Unknown column type in raw decoder!");
 }
 
-inline std::shared_ptr<Column> DecodeDictionary(EncodedColumnView column , ColumnType type) {
+inline std::shared_ptr<Column> DecodeDictionary(EncodedColumnView column , ColumnType type , Utility::StringArena* arena = nullptr) {
     if (type != ColumnType::String) {
         throw std::runtime_error("Dictionary codec is supported only for string columns!");
+    }
+    if (arena == nullptr) {
+        throw std::runtime_error("String arena is required for dictionary string decoder!");
     }
     size_t pos = 0;
     int16_t unique_count_signed = 0;
@@ -88,25 +96,12 @@ inline std::shared_ptr<Column> DecodeDictionary(EncodedColumnView column , Colum
 
     size_t dictionary_bytes = unique_count == 0 ? 0 : static_cast<size_t>(offsets.back());
     const char* dictionary_data = reinterpret_cast<const char*>(column.data + pos);
+    std::string_view dictionary = arena->Add(dictionary_data , dictionary_bytes);
     pos += dictionary_bytes;
 
-	auto result = std::make_shared<StringColumn>();
+	auto result = std::make_shared<StringColumn>(arena);
 	size_t rows_count = (column.size - pos) / sizeof(int16_t);
-	size_t indices_pos = pos;
-	size_t decoded_data_size = 0;
-	for (size_t i = 0; i < rows_count; ++i) {
-	    int16_t index_signed = 0;
-	    memcpy(&index_signed , column.data + pos , sizeof(index_signed));
-	    pos += sizeof(index_signed);
-	    size_t index = static_cast<size_t>(index_signed);
-	    size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
-	    size_t end = static_cast<size_t>(offsets[index]);
-	    decoded_data_size += end - start;
-	}
-
 	result->Reserve(rows_count);
-	result->ReserveData(decoded_data_size);
-	pos = indices_pos;
 	for (size_t i = 0; i < rows_count; ++i) {
 	    int16_t index_signed = 0;
 	    memcpy(&index_signed , column.data + pos , sizeof(index_signed));
@@ -114,7 +109,7 @@ inline std::shared_ptr<Column> DecodeDictionary(EncodedColumnView column , Colum
 	    size_t index = static_cast<size_t>(index_signed);
 	    size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
 	    size_t end = static_cast<size_t>(offsets[index]);
-        result->AppendFromString(dictionary_data + start , end - start);
+        result->Emplace_Back(dictionary.data() + start , end - start);
     }
 	return result;
 }
@@ -190,12 +185,12 @@ inline std::shared_ptr<Column> DecodeBitPack(EncodedColumnView column , ColumnTy
     }
 }
 
-inline std::shared_ptr<Column> DecodeColumn(EncodedColumnView column , ColumnType type) {
+inline std::shared_ptr<Column> DecodeColumn(EncodedColumnView column , ColumnType type , Utility::StringArena* arena = nullptr) {
     switch(column.codec) {
         case CodecType::Raw:
-            return DecodeRaw(column , type);
+            return DecodeRaw(column , type , arena);
         case CodecType::Diction:
-            return DecodeDictionary(column , type);
+            return DecodeDictionary(column , type , arena);
         case CodecType::BitPack:
             return DecodeBitPack(column , type);
         case CodecType::Delta:
@@ -204,8 +199,8 @@ inline std::shared_ptr<Column> DecodeColumn(EncodedColumnView column , ColumnTyp
     throw std::runtime_error("Unknown codec type in DecodeColumn!");
 }
 
-inline std::shared_ptr<Column> DecodeColumn(const EncodedColumn& column , ColumnType type) {
-    return DecodeColumn(EncodedColumnView{column.codec , column.data.data() , column.data.size()} , type);
+inline std::shared_ptr<Column> DecodeColumn(const EncodedColumn& column , ColumnType type , Utility::StringArena* arena = nullptr) {
+    return DecodeColumn(EncodedColumnView{column.codec , column.data.data() , column.data.size()} , type , arena);
 }
 
 } // Decoder

@@ -1,4 +1,6 @@
 #pragma once 
+#include <cstring>
+#include <string_view>
 #include <vector>
 #include <string>
 #include <memory>
@@ -26,6 +28,15 @@ public:
     StringArena& operator=(const StringArena&) = delete;
     StringArena(StringArena&&) noexcept = default;
     StringArena& operator=(StringArena&&) noexcept = default;
+
+    std::string_view Add(const char* start , size_t size) {
+        if (size == 0) {
+            return std::string_view(empty_string_ptr_, 0);
+        }
+        char* ptr = Allocate(size);
+        memcpy(ptr, start, size);
+        return std::string_view(ptr , size);
+    }
 
     std::string_view Add(std::string_view s) {
         if (s.empty()) {

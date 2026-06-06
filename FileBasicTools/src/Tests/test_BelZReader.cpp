@@ -50,10 +50,10 @@ protected:
             writer.AppendColumn(id_column, ColumnType::Int64);
 
             meta.AddColumnOffset(writer.GetOffSet());
-            auto name_column = std::make_shared<StringColumn>();
+            auto name_column = std::make_shared<FlatStringColumn>();
             for (size_t r = 0; r < rows_per_batch; ++r) {
                 std::string val = "name_" + std::to_string((b * rows_per_batch) + r);
-                name_column->Push_Back(val);
+                name_column->AppendFromString(val);
             }
             writer.AppendColumn(name_column, ColumnType::String);
             writer.Flush();
@@ -92,9 +92,9 @@ TEST_F(BelZReaderTest, ReadSingleBatch) {
     ASSERT_TRUE(Is<StringColumn>(col2));
     auto strCol = As<StringColumn>(col2);
     ASSERT_EQ(strCol->Size(), rows);
-    EXPECT_EQ((*strCol)[0], "name_0");
-    EXPECT_EQ((*strCol)[1], "name_1");
-    EXPECT_EQ((*strCol)[2], "name_2");
+    EXPECT_EQ(strCol->At_view(0), "name_0");
+    EXPECT_EQ(strCol->At_view(1), "name_1");
+    EXPECT_EQ(strCol->At_view(2), "name_2");
 
     // Теперь ридер должен быть пуст
     EXPECT_TRUE(reader.Empty());

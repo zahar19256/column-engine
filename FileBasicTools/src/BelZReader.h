@@ -14,7 +14,7 @@ public:
     void ReadBatch(Batch& batch);
     void ReadBatch(Batch& batch , const std::vector<std::string>& column_names);
     void ScanBatch(size_t index , Batch& batch);
-    std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type , ssize_t need_offset = -1);
+    std::shared_ptr<Column> ReadColumn(size_t size , ColumnType type , Utility::StringArena* arena = nullptr , ssize_t need_offset = -1);
 
     template <typename ValueT , typename ColumnT>
     std::shared_ptr<Column> ReadFixedWidthColumn(size_t size) {
@@ -40,6 +40,7 @@ public:
     std::shared_ptr<Column> ReadDateColumn(size_t size);
     std::shared_ptr<Column> ReadTimestampColumn(size_t size);
     std::shared_ptr<Column> ReadColumn(size_t batch_id , size_t column_id);
+    std::shared_ptr<Column> ReadColumn(size_t batch_id , size_t column_id , Utility::StringArena* arena);
     std::shared_ptr<Column> ReadColumn(size_t columnd_id);
     void ReadMetaData();
     MetaData GetMetaData() const;

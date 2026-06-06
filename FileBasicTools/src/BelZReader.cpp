@@ -24,7 +24,7 @@ bool BelZReader::Empty() const {
 }
 
 std::shared_ptr<Column> BelZReader::ReadStringColumn(size_t size) {
-    auto result = std::make_shared<StringColumn>();
+    auto result = std::make_shared<FlatStringColumn>();
     size_t data_sz;
     size_t offset_sz;
     stream_.read(reinterpret_cast<char*>(&data_sz) , sizeof(size_t));
@@ -55,7 +55,7 @@ std::shared_ptr<Column> BelZReader::ReadTimestampColumn(size_t size) {
     return ReadFixedWidthColumn<int64_t , TimeStampColumn>(size);
 }
 
-std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , ssize_t need_offset) {
+std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , Utility::StringArena* arena , ssize_t need_offset) {
     if (need_offset != -1) {
         stream_.seekg(need_offset);
     }
@@ -75,7 +75,7 @@ std::shared_ptr<Column> BelZReader::ReadColumn(size_t size , ColumnType type , s
             throw std::runtime_error("Failed to read encoded column payload");
         }
     }
-    auto result = Decoder::DecodeColumn(encoded , type);
+    auto result = Decoder::DecodeColumn(encoded , type , arena);
     if (result->Size() != size) {
         throw std::runtime_error("Decoded column size mismatch: expected " + std::to_string(size) + ", got " + std::to_string(result->Size()));
     }
@@ -133,7 +133,7 @@ void BelZReader::ReadBatch(Batch& batch) {
     size_t rows_count = meta_.GetRow(index_of_batch);
 
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        auto col_ptr = ReadColumn(rows_count, scheme_.GetType(column));
+        auto col_ptr = ReadColumn(rows_count, scheme_.GetType(column), batch.GetStringArena());
         batch.AddColumn(col_ptr);
     }
     --batches_left_;
@@ -151,7 +151,7 @@ void BelZReader::ScanBatch(size_t index , Batch& batch) {
     size_t rows_count = meta_.GetRow(index);
 
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        batch.AddColumn(ReadColumn(rows_count, scheme_.GetType(column)));
+        batch.AddColumn(ReadColumn(rows_count, scheme_.GetType(column), batch.GetStringArena()));
     }
 }
 
@@ -169,7 +169,7 @@ void BelZReader::ReadBatch(Batch& batch , const std::vector<std::string>& column
     batch.SetScheme(projection_scheme);
     batch.SetRows(rows_count);
     for (size_t column = 0; column < column_names.size(); ++column) {
-        auto col_ptr = ReadColumn(index_of_batch , scheme_.GetIndex(column_names[column]));
+        auto col_ptr = ReadColumn(index_of_batch , scheme_.GetIndex(column_names[column]) , batch.GetStringArena());
         batch.AddColumn(col_ptr);
     }
     --batches_left_;
@@ -193,6 +193,10 @@ size_t BelZReader::RowsCount() const {
 }
 
 std::shared_ptr<Column> BelZReader::ReadColumn(size_t batch_id , size_t column_id) {
+    return ReadColumn(batch_id , column_id , nullptr);
+}
+
+std::shared_ptr<Column> BelZReader::ReadColumn(size_t batch_id , size_t column_id , Utility::StringArena* arena) {
     if (batch_id >= meta_.BatchesCount()) {
         throw std::runtime_error("Batch ID out of range in ReadColumn: " + std::to_string(batch_id));
     }
@@ -202,5 +206,5 @@ std::shared_ptr<Column> BelZReader::ReadColumn(size_t batch_id , size_t column_i
     size_t offset = meta_.GetColumnOffset(batch_id, column_id);
     ColumnType type = scheme_.GetType(column_id);
     size_t rows = meta_.GetRow(batch_id);
-    return ReadColumn(rows, type, offset);
+    return ReadColumn(rows, type, arena, offset);
 }

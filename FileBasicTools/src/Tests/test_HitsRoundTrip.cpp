@@ -94,8 +94,8 @@ TEST_F(HitsRoundTripTest, ConvertsAndReadsProjectedClickBenchTypes) {
     EXPECT_EQ(adv_engine->At(4), 3);
     EXPECT_EQ(user_id->At(0), 100);
     EXPECT_EQ(user_id->At(4), 300);
-    EXPECT_EQ(std::string(search_phrase->At(0)), "alpha");
-    EXPECT_EQ(std::string(search_phrase->At(3)), "");
+    EXPECT_EQ(search_phrase->At_view(0), "alpha");
+    EXPECT_EQ(search_phrase->At_view(3), "");
     EXPECT_EQ(event_date->At(0), Data::ParseDate("2013-07-15"));
     EXPECT_EQ(event_date->At(4), Data::ParseDate("2013-07-19"));
     EXPECT_EQ(event_time->At(0), Data::ParseTimestamp("2013-07-15 10:47:34"));

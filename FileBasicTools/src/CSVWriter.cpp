@@ -259,7 +259,10 @@ void CSVWriter::WriteValue(const std::shared_ptr<Column>& column, ColumnType typ
             WriteDouble(static_cast<const DoubleColumn*>(column.get())->At(row));
             return;
         case ColumnType::String:
-            WriteString(static_cast<const StringColumn*>(column.get())->At(row));
+            WriteString(static_cast<const StringColumn*>(column.get())->At_view(row));
+            return;
+        case ColumnType::FlatString:
+            WriteString(static_cast<const FlatStringColumn*>(column.get())->At(row));
             return;
         case ColumnType::Date:
             WriteDate(static_cast<const DateColumn*>(column.get())->At(row));
