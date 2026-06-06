@@ -74,7 +74,7 @@ namespace Filters {
         const std::string_view needle(value);
         boost::dynamic_bitset<> result(column.Size());
         for (size_t index = 0; index < column.Size(); ++index) {
-            result[index] = Not ^ (column.At(index).find(needle) != std::string_view::npos);
+            result[index] = Not ^ (column.At_view(index).find(needle) != std::string_view::npos);
         }
         return result;
     }
@@ -84,7 +84,7 @@ namespace Filters {
         const std::string_view prefix(value);
         boost::dynamic_bitset<> result(column.Size());
         for (size_t index = 0; index < column.Size(); ++index) {
-            result[index] = Not ^ column.At(index).starts_with(prefix);
+            result[index] = Not ^ column.At_view(index).starts_with(prefix);
         }
         return result;
     }
@@ -94,7 +94,7 @@ namespace Filters {
         const std::string_view suffix(value);
         boost::dynamic_bitset<> result(column.Size());
         for (size_t index = 0; index < column.Size(); ++index) {
-            result[index] = Not ^ column.At(index).ends_with(suffix);
+            result[index] = Not ^ column.At_view(index).ends_with(suffix);
         }
         return result;
     }
@@ -137,7 +137,7 @@ namespace Filters {
         }
         boost::dynamic_bitset<> result(column.Size());
         for (size_t index = 0; index < column.Size(); ++index) {
-            result[index] = Not ^ RE2::FullMatch(column.At(index) , compiled_regex);
+            result[index] = Not ^ RE2::FullMatch(column.At_view(index) , compiled_regex);
         }
         return result;
     }

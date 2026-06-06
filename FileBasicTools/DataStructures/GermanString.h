@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <cstring>
 #include <algorithm>
-#include <string.h>
+#include <string>
 #include <string_view>
 
 class GermanStr {
@@ -29,126 +29,70 @@ public:
 
     GermanStr& operator=(const GermanStr& other) = default;
 
-    inline bool operator>(const GermanStr& other) const noexcept {
+    inline int Compare(std::string_view other) const noexcept {
         size_t size = Size();
-        size_t other_size = other.Size();
-        size_t mn_size = std::min(size , other_size);
+        size_t other_size = other.size();
+        size_t mn_size = std::min(size, other_size);
         if (mn_size >= 4) {
             uint32_t prefix = GetPref();
-            uint32_t other_prefix = other.GetPref();
+            uint32_t other_prefix;
+            std::memcpy(&other_prefix, other.data(), 4);
             if (prefix != other_prefix) {
-                return __builtin_bswap32(prefix) > __builtin_bswap32(other_prefix);
+                return __builtin_bswap32(prefix) < __builtin_bswap32(other_prefix) ? -1 : 1;
             }
-            mn_size -= 4;
-            if (mn_size != 0) {
-                int compare_result = memcmp(Data() + 4 , other.Data() + 4 , mn_size);
+            if (mn_size > 4) {
+                int compare_result = std::memcmp(Data() + 4, other.data() + 4, mn_size - 4);
                 if (compare_result != 0) {
-                    return compare_result > 0;
+                    return compare_result;
                 }
             }
-            return size > other_size;
-        }
-        if (mn_size != 0) {
-            int compare_result = memcmp(Data() , other.Data() , mn_size);
+        } else if (mn_size > 0) {
+            int compare_result = std::memcmp(Data(), other.data(), mn_size);
             if (compare_result != 0) {
-                return compare_result > 0;
+                return compare_result;
             }
         }
-        return size > other_size;
+        if (size < other_size) {
+            return -1;
+        }
+        if (size > other_size) {
+            return 1;
+        }
+        return 0;
     }
-    inline bool operator<=(const GermanStr& other) const noexcept {
-        size_t size = Size();
-        size_t other_size = other.Size();
-        size_t mn_size = std::min(size , other_size);
-        if (mn_size >= 4) {
-            uint32_t prefix = GetPref();
-            uint32_t other_prefix = other.GetPref();
-            if (prefix != other_prefix) {
-                return __builtin_bswap32(prefix) < __builtin_bswap32(other_prefix);
-            }
-            mn_size -= 4;
-            if (mn_size != 0) {
-                int compare_result = memcmp(Data() + 4 , other.Data() + 4 , mn_size);
-                if (compare_result != 0) {
-                    return compare_result < 0;
-                }
-            }
-            return size <= other_size;
-        }
-        if (mn_size != 0) {
-            int compare_result = memcmp(Data() , other.Data() , mn_size);
-            if (compare_result != 0) {
-                return compare_result < 0;
-            }
-        }
-        return size <= other_size;
+
+    inline bool operator<(std::string_view other) const noexcept {
+        return Compare(other) < 0;
     }
-    inline bool operator>=(const GermanStr& other) const noexcept {
-        size_t size = Size();
-        size_t other_size = other.Size();
-        size_t mn_size = std::min(size , other_size);
-        if (mn_size >= 4) {
-            uint32_t prefix = GetPref();
-            uint32_t other_prefix = other.GetPref();
-            if (prefix != other_prefix) {
-                return __builtin_bswap32(prefix) > __builtin_bswap32(other_prefix);
-            }
-            mn_size -= 4;
-            if (mn_size != 0) {
-                int compare_result = memcmp(Data() + 4 , other.Data() + 4 , mn_size);
-                if (compare_result != 0) {
-                    return compare_result > 0;
-                }
-            }
-            return size >= other_size;
-        }
-        if (mn_size != 0) {
-            int compare_result = memcmp(Data() , other.Data() , mn_size);
-            if (compare_result != 0) {
-                return compare_result > 0;
-            }
-        }
-        return size >= other_size;
+    inline bool operator>(std::string_view other) const noexcept {
+        return Compare(other) > 0;
     }
-    inline bool operator==(const GermanStr& other) const noexcept {
-        if (high_ != other.high_) {
-            return false;
-        }
+    inline bool operator<=(std::string_view other) const noexcept {
+        return Compare(other) <= 0;
+    }
+    inline bool operator>=(std::string_view other) const noexcept {
+        return Compare(other) >= 0;
+    }
+
+    inline bool operator==(std::string_view other) const noexcept {
         size_t sz = Size();
-        if (sz <= 12) {
-            return low_ == other.low_;
-        }
-        if (GetPref() != other.GetPref()) {
+        if (sz != other.size()) {
             return false;
         }
-        return memcmp(Data() , other.Data() , sz) == 0;
-    }
-    inline bool operator<(const GermanStr& other) const noexcept {
-        size_t size = Size();
-        size_t other_size = other.Size();
-        size_t mn_size = std::min(size , other_size);
-        if (mn_size >= 4) {
+        if (sz >= 4) {
             uint32_t prefix = GetPref();
-            uint32_t other_prefix = other.GetPref();
+            uint32_t other_prefix;
+            std::memcpy(&other_prefix, other.data(), 4);
             if (prefix != other_prefix) {
-                return __builtin_bswap32(prefix) < __builtin_bswap32(other_prefix);
+                return false;
             }
-            mn_size -= 4;
-            if (mn_size != 0) {
-                int compare_result = memcmp(Data() + 4 , other.Data() + 4 , mn_size);
-                if (compare_result != 0) {
-                    return compare_result < 0;
-                }
-            }
-            return size < other_size;
+            return std::memcmp(Data() + 4, other.data() + 4, sz - 4) == 0;
         }
-        if (mn_size != 0) {
-            int compare_result = memcmp(Data() , other.Data() , mn_size);
-            if (compare_result != 0) {
-                return compare_result < 0;
-            }
-        }
-        return size < other_size;
+        return std::memcmp(Data(), other.data(), sz) == 0;
+    }
+
+    inline bool operator!=(std::string_view other) const noexcept {
+        return !(*this == other);
     }
 
     size_t Size() const noexcept;
@@ -168,3 +112,22 @@ private:
     uint64_t high_;
     uint64_t low_;
 };
+
+inline bool operator<(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) > 0;
+}
+inline bool operator>(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) < 0;
+}
+inline bool operator<=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) >= 0;
+}
+inline bool operator>=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) <= 0;
+}
+inline bool operator==(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs == lhs;
+}
+inline bool operator!=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return !(rhs == lhs);
+}
