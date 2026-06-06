@@ -6,6 +6,7 @@
 #include "../Functions/TopK.h"
 #include "../Helpers/AggrBuilder.h"
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -110,7 +111,7 @@ public:
         Batch input;
         while (child->Next(input)) {
             for (size_t i = 0; i < states_.size(); ++i) {
-                const std::shared_ptr<Column> column = calls_[i].expression ? calls_[i].expression->EvalBatch(input) : nullptr;
+                const std::shared_ptr<Column> column = calls_[i].expression ? calls_[i].expression->EvalBatch(input , env_) : nullptr;
                 states_[i]->UpdateBatch(column.get() , input.GetRows() , input.GetMsk());
             }
         }
@@ -124,6 +125,8 @@ private:
 
     bool finished_ = false;
     std::vector<std::unique_ptr<Aggregation::AggregationState>> states_;
+
+    EvalContext env_;
 };
 
 class GroupByAggregationExecutor : public AggregationExecutorBase {
@@ -143,6 +146,7 @@ private:
     std::vector<std::shared_ptr<ScalarExpr>> group_by_;
     absl::flat_hash_map <Utility::GroupKey , AggrState , Utility::GroupHash> storage_;
     bool finished_ = false;
+    EvalContext env_;
 };
 
 class ProjectionExecutor : public Executor {
@@ -218,7 +222,7 @@ public:
     }
     bool Next(Batch& data) override;
 private:
-    std::shared_ptr<Column> SliceColumn(std::shared_ptr<Column> column , size_t del , bool front = true);
+    std::shared_ptr<Column> SliceColumn(std::shared_ptr<Column> column , size_t del , Utility::StringArena* arena , bool front = true);
     size_t limit_;
     size_t offset_ = 0;
     size_t skipped_ = 0;

@@ -35,6 +35,9 @@ enum class ScalarExprType: int8_t {
     Unary,
 };
 
+struct EvalContext {
+    Utility::StringArena* string_arena;
+};
 
 class Expr {
 public:
@@ -49,7 +52,7 @@ public:
 
 class ScalarExpr : public Expr {
 public:
-    virtual std::shared_ptr<Column> EvalBatch(const Batch& data) const = 0;
+    virtual std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const = 0;
     virtual ColumnType GetType() const {
         return ColumnType::Unknown;
     }
@@ -97,7 +100,7 @@ public:
         }
     }
 
-    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
+    std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
         if (!else_) {
             throw std::runtime_error("CaseWhenExpr requires ELSE expression!");
         }
@@ -119,16 +122,16 @@ public:
             if (mask.size() != rows) {
                 throw std::runtime_error("CaseWhenExpr condition mask size mismatch!");
             }
-            auto column = expression->EvalBatch(data);
+            auto column = expression->EvalBatch(data , env);
             CheckColumn(column , rows , result_type);
             masks.push_back(std::move(mask));
             columns.push_back(std::move(column));
         }
 
-        auto else_column = else_->EvalBatch(data);
+        auto else_column = else_->EvalBatch(data , env);
         CheckColumn(else_column , rows , result_type);
 
-        auto result = MakeColumn(result_type);
+        auto result = MakeColumn(result_type , env.string_arena);
         result->Reserve(rows);
         for (size_t row = 0; row < rows; ++row) {
             bool was_inserted = false;
@@ -174,8 +177,9 @@ private:
         if (!result_column || !source_column) {
             throw std::runtime_error("CaseWhenExpr string column mismatch!");
         }
-        const auto value = source_column->At(row);
-        result_column->AppendFromString(value.data() , value.size());
+        auto value = source_column->At_view(row);
+        result_column->AppendFromString(value.data(),
+        value.size());
     }
 
     static void PushValue(const std::shared_ptr<Column>& result , const std::shared_ptr<Column>& source , size_t row , ColumnType type) {
@@ -207,8 +211,8 @@ private:
             case ColumnType::Int128:
                 PushTypedValue<Int128Column>(result , source , row);
                 return;
-            case ColumnType::Unknown:
-                break;
+            default:
+                throw std::runtime_error("Unknown type column in CaseWhen!");
         }
         throw std::runtime_error("Unknown CaseWhenExpr output type!");
     }
@@ -226,8 +230,8 @@ public:
             throw std::runtime_error("RegexpReplace requires pattern and replacement!");
         }
     }
-    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
-        auto column = column_->EvalBatch(data);
+    std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
+        auto column = column_->EvalBatch(data , env);
         if (type_ == UnaryExprType::RegexpReplace) {
             return ApplyRegexpReplace(column , *arg1_ , *arg2_);
         }
@@ -275,7 +279,7 @@ public:
     void CollectColumns(std::unordered_set<std::string>& result) const override {
         result.insert(column_name_);
     }
-    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
+    std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
         if (column_index_ == std::nullopt) {
             column_index_ = data.GetScheme().GetIndex(column_name_);
         }
@@ -289,13 +293,12 @@ private:
 
 class LiteralExpr: public ScalarExpr {
 public:
-    explicit LiteralExpr(Utility::ScalarValue value , ColumnType type = ColumnType::Unknown)
+    explicit LiteralExpr(Utility::LiteralValue value , ColumnType type = ColumnType::Unknown)
         : value_(std::move(value)) ,
-          type_(type == ColumnType::Unknown ? InferType(value_) : type) ,
-          column_(MakeColumn(type_)) {
+          type_(type == ColumnType::Unknown ? InferType(value_) : type) {
     }
 
-    const Utility::ScalarValue& GetValue() const {
+    const Utility::LiteralValue& GetValue() const {
         return value_;
     }
     ColumnType GetType() const override {
@@ -303,23 +306,18 @@ public:
     }
     void CollectColumns(std::unordered_set<std::string>& storage) const override {
     }
-    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
-        AssignColumn(data.GetRows());
-        return column_;
+    std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
+        return MakeLiteralColumn(data.GetRows() , env);
     }
 private:
-    void RecreateColumn() const {
-        column_ = MakeColumn(type_);
-    }
-
-    static int64_t RequireInt64(const Utility::ScalarValue& value) {
+    static int64_t RequireInt64(const Utility::LiteralValue& value) {
         if (const auto* current = std::get_if<int64_t>(&value)) {
             return *current;
         }
         throw std::runtime_error("Literal value is not Int64-compatible!");
     }
 
-    static double RequireDouble(const Utility::ScalarValue& value) {
+    static double RequireDouble(const Utility::LiteralValue& value) {
         if (const auto* current = std::get_if<double>(&value)) {
             return *current;
         }
@@ -329,7 +327,7 @@ private:
         throw std::runtime_error("Literal value is not Double-compatible!");
     }
 
-    static __int128_t RequireInt128(const Utility::ScalarValue& value) {
+    static __int128_t RequireInt128(const Utility::LiteralValue& value) {
         if (const auto* current = std::get_if<__int128_t>(&value)) {
             return *current;
         }
@@ -339,55 +337,63 @@ private:
         throw std::runtime_error("Literal value is not Int128-compatible!");
     }
 
-    static const std::string& RequireString(const Utility::ScalarValue& value) {
+    static std::string_view RequireStringView(const Utility::LiteralValue& value) {
         if (const auto* current = std::get_if<std::string>(&value)) {
             return *current;
         }
         throw std::runtime_error("Literal value is not String-compatible!");
     }
 
-    void AssignColumn(size_t rows) const {
-        RecreateColumn();
+    std::shared_ptr<Column> MakeLiteralColumn(size_t rows , EvalContext& env) const {
+        auto column = MakeColumn(type_ , env.string_arena);
         switch(type_) {
             case ColumnType::Int8:
-                As<Int8Column>(column_)->Assign(rows , static_cast<int8_t>(RequireInt64(value_)));
-                return;
+                As<Int8Column>(column)->Assign(rows , static_cast<int8_t>(RequireInt64(value_)));
+                return column;
             case ColumnType::Int16:
-                As<Int16Column>(column_)->Assign(rows , static_cast<int16_t>(RequireInt64(value_)));
-                return;
+                As<Int16Column>(column)->Assign(rows , static_cast<int16_t>(RequireInt64(value_)));
+                return column;
             case ColumnType::Int32:
-                As<Int32Column>(column_)->Assign(rows , static_cast<int32_t>(RequireInt64(value_)));
-                return;
+                As<Int32Column>(column)->Assign(rows , static_cast<int32_t>(RequireInt64(value_)));
+                return column;
             case ColumnType::Int64:
-                As<Int64Column>(column_)->Assign(rows , RequireInt64(value_));
-                return;
+                As<Int64Column>(column)->Assign(rows , RequireInt64(value_));
+                return column;
             case ColumnType::Double:
-                As<DoubleColumn>(column_)->Assign(rows , RequireDouble(value_));
-                return;
-            case ColumnType::String:
-                As<StringColumn>(column_)->Assign(rows , RequireString(value_));
-                return;
+                As<DoubleColumn>(column)->Assign(rows , RequireDouble(value_));
+                return column;
+            case ColumnType::String: {
+                if (env.string_arena == nullptr) {
+                    throw std::runtime_error("String literal requires string arena!");
+                }
+                std::string_view value = RequireStringView(value_);
+                std::string_view stored = env.string_arena->Add(value.data() , value.size());
+                As<StringColumn>(column)->Assign(rows , GermanStr(stored.data() , stored.size()));
+                return column;
+            }
             case ColumnType::Date:
-                As<DateColumn>(column_)->Assign(rows , RequireInt64(value_));
-                return;
+                As<DateColumn>(column)->Assign(rows , RequireInt64(value_));
+                return column;
             case ColumnType::Timestamp:
-                As<TimeStampColumn>(column_)->Assign(rows , RequireInt64(value_));
-                return;
+                As<TimeStampColumn>(column)->Assign(rows , RequireInt64(value_));
+                return column;
             case ColumnType::Int128:
-                As<Int128Column>(column_)->Assign(rows , RequireInt128(value_));
-                return;
-            case ColumnType::Unknown:
-                break;
+                As<Int128Column>(column)->Assign(rows , RequireInt128(value_));
+                return column;
+            default:
+                throw std::runtime_error("Unknown column type in LiteralExpr!");
         }
         throw std::runtime_error("Unknown literal output column type!");
     }
 
-    static ColumnType InferType(const Utility::ScalarValue& value) {
+    static ColumnType InferType(const Utility::LiteralValue& value) {
         return std::visit([](const auto& item) {
             using T = std::decay_t<decltype(item)>;
             if constexpr (std::is_same_v<T, int64_t>) {
                 return ColumnType::Int64;
             } else if constexpr (std::is_same_v<T, std::string>) {
+                return ColumnType::String;
+            } else if constexpr (std::is_same_v<T, GermanStr>) {
                 return ColumnType::String;
             } else if constexpr (std::is_same_v<T, double>) {
                 return ColumnType::Double;
@@ -399,9 +405,8 @@ private:
         }, value);
     }
 
-    Utility::ScalarValue value_;
+    Utility::LiteralValue value_;
     ColumnType type_ = ColumnType::Unknown;
-    mutable std::shared_ptr<Column> column_;
 };
 
 class BinaryExpr : public ScalarExpr {
@@ -428,11 +433,11 @@ public:
             right_->CollectColumns(result);
         }
     }
-    std::shared_ptr<Column> EvalBatch(const Batch& data) const override {
+    std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
         if (right_) {
-            return ApplyBinaryOp(op_ , left_->EvalBatch(data) , right_->EvalBatch(data) , out_type_);
+            return ApplyBinaryOp(op_ , left_->EvalBatch(data , env) , right_->EvalBatch(data , env) , out_type_);
         }
-        return left_->EvalBatch(data);
+        return left_->EvalBatch(data , env);
     }
 private:
     BinaryExprType op_;

@@ -1,5 +1,7 @@
 #include "Executor.h"
 #include "Functions/Aggregation.h"
+#include "GermanString.h"
+#include "Utility.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -74,13 +76,13 @@ void AppendScalarValue(Column& column , const Utility::ScalarValue& value) {
             }
             throw std::runtime_error("Group by key value is not Double!");
         case ColumnType::String:
-            if (const auto* current = std::get_if<std::string>(&value)) {
+            if (const auto* current = std::get_if<GermanStr>(&value)) {
                 PushTypedValue<StringColumn>(column , *current);
                 return;
             }
             throw std::runtime_error("Group by key value is not String!");
-        case ColumnType::Unknown:
-            break;
+        default:
+            throw std::runtime_error("Unknown column type in append scalar value!");
     }
     throw std::runtime_error("Unknown group by output column type!");
 }
@@ -106,7 +108,7 @@ void GlobalAggregationExecutor::OutputBatch(Batch& out) const {
         const ColumnType result_type =
             calls_[i].output_type == ColumnType::Unknown ? states_[i]->FinalType() : calls_[i].output_type;
 
-        auto column = MakeColumn(result_type);
+        auto column = MakeColumn(result_type , out.GetStringArena());
         states_[i]->AppendResult(*column);
         scheme.Push_Back(SchemeNode{DefaultOutputName(calls_[i] , i), result_type});
         columns.push_back(std::move(column));
@@ -130,12 +132,12 @@ bool GroupByAggregationExecutor::Next(Batch& data) {
         std::vector<std::shared_ptr<Column>> group_columns;
         group_columns.reserve(group_by_.size());
         for (const auto& expr : group_by_) {
-            group_columns.push_back(expr->EvalBatch(input));
+            group_columns.push_back(expr->EvalBatch(input , env_));
         }
         std::vector<std::shared_ptr<Column>> aggregate_columns;
         aggregate_columns.reserve(calls_.size());
         for (const AggregationCall& call : calls_) {
-            aggregate_columns.push_back(call.expression ? call.expression->EvalBatch(input) : nullptr);
+            aggregate_columns.push_back(call.expression ? call.expression->EvalBatch(input , env_) : nullptr);
         }
 
         const auto& mask = input.GetMsk();
@@ -211,7 +213,7 @@ void GroupByAggregationExecutor::OutputBatch(Batch& out) const {
 
     for (size_t i = 0; i < group_by_.size(); ++i) {
         const ColumnType result_type = GroupByOutputType(i);
-        auto column = MakeColumn(result_type);
+        auto column = MakeColumn(result_type , out.GetStringArena());
         column->Reserve(storage_.size());
         scheme.Push_Back(SchemeNode{DefaultGroupByOutputName(group_by_[i] , i), result_type});
         columns.push_back(std::move(column));
@@ -219,7 +221,7 @@ void GroupByAggregationExecutor::OutputBatch(Batch& out) const {
 
     for (size_t i = 0; i < calls_.size(); ++i) {
         const ColumnType result_type = AggregationOutputType(i);
-        auto column = MakeColumn(result_type);
+        auto column = MakeColumn(result_type , out.GetStringArena());
         column->Reserve(storage_.size());
         scheme.Push_Back(SchemeNode{DefaultOutputName(calls_[i] , i), result_type});
         columns.push_back(std::move(column));
@@ -277,10 +279,10 @@ bool LimitExecutor::Next(Batch& data) {
         for (size_t column_index = 0; column_index < data.Size(); ++column_index) {
             std::shared_ptr<Column> column = data.GetColumn(column_index);
             if (drop_front != 0) {
-                column = SliceColumn(std::move(column) , drop_front);
+                column = SliceColumn(std::move(column) , drop_front , result.GetStringArena());
             }
             if (drop_back != 0) {
-                column = SliceColumn(std::move(column) , drop_back , false);
+                column = SliceColumn(std::move(column) , drop_back , result.GetStringArena() , false);
             }
             result.AddColumn(std::move(column));
         }
@@ -293,7 +295,7 @@ bool LimitExecutor::Next(Batch& data) {
     return false;
 }
 
-std::shared_ptr<Column> LimitExecutor::SliceColumn(std::shared_ptr<Column> column , size_t del , bool front) {
+std::shared_ptr<Column> LimitExecutor::SliceColumn(std::shared_ptr<Column> column , size_t del , Utility::StringArena* arena , bool front) {
     if (!column) {
         throw std::runtime_error("Can't slice null column!");
     }
@@ -306,7 +308,7 @@ std::shared_ptr<Column> LimitExecutor::SliceColumn(std::shared_ptr<Column> colum
     }
     size_t begin = front ? del : 0;
     size_t end = front ? size : size - del;
-    std::shared_ptr<Column> result = MakeColumn(column->GetType());
+    std::shared_ptr<Column> result = MakeColumn(column->GetType() , arena);
     for (size_t row = begin; row < end; ++row) {
         AppendScalarValue(*result , column->GetScalarValue(row));
     }
