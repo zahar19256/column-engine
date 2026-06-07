@@ -15,7 +15,8 @@
 namespace Utility {
 
 using Element_view = std::variant<int64_t , std::string_view , double>;
-using ScalarValue = std::variant<int64_t , GermanStr , double , __int128_t>;
+using ScalarValue = std::variant<int64_t , GermanStr , double , __int128_t>; // TODO добавить std::string или не надо пока хз
+using LiteralValue = std::variant<int64_t , std::string , double , __int128_t>;
 using GroupKey = std::vector<ScalarValue>;
 
 class StringArena {
@@ -102,8 +103,8 @@ private:
             if constexpr (std::is_same_v<T, int64_t>) {
                 size_t value_hash = std::hash<int64_t>{}(item);
                 Combine(hash , value_hash ^ hash_integer_state_);
-            } else if constexpr (std::is_same_v<T, std::string>) {
-                size_t value_hash = std::hash<std::string>{}(item);
+            } else if constexpr (std::is_same_v<T, GermanStr>) {
+                size_t value_hash = GermanStrHash{}(item);
                 Combine(hash , value_hash ^ hash_string_state_);
             } else if constexpr (std::is_same_v<T, double>) {
                 Combine(hash , HashDouble(item) ^ hash_double_state_);

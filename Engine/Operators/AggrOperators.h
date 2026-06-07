@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include "GermanString.h"
 #include "absl/container/flat_hash_set.h"
 
 namespace Aggregation {
@@ -121,22 +122,29 @@ namespace Aggregation {
     template <StringType T>
     struct MinOperator<T> {
         struct StateType {
-            T result;
+            std::string storage;
+            GermanStr result;
             bool has_value = false;
         };
-        using ResultType = T;
+        using ResultType = GermanStr;
         
         static StateType Init() {
             return {};
         }
 
+        static inline void UpdateValue(StateType& state , GermanStr value) {
+            if (!state.has_value || state.result > value) {
+                state.has_value = true;
+                std::string_view view = value.View();
+                state.storage.assign(view.data() , view.size());
+                state.result = GermanStr(state.storage.data() , state.storage.size());
+            }
+        }
+
         template <typename ColumnType>
         static inline void UpdateFull(StateType& state , const ColumnType& column) {
             for (size_t i = 0; i < column->Size(); ++i) {
-                if (!state.has_value || (state.has_value && state.result > column->At(i))) {
-                    state.has_value = true;
-                    state.result = column->At(i);
-                }
+                UpdateValue(state , column->At(i));
             }
         }
 
@@ -146,20 +154,15 @@ namespace Aggregation {
                 throw std::runtime_error("MinOperator mask size mismatch!");
             }
             for (size_t i = 0; i < column->Size(); ++i) {
-                if (mask[i] && (!state.has_value || (state.has_value && state.result > column->At(i)))) {
-                    state.has_value = true;
-                    state.result = column->At(i);
+                if (mask[i]) {
+                    UpdateValue(state , column->At(i));
                 }
             }
         }
 
         template <typename ColumnType>
         static inline void UpdateRow(StateType& state , const ColumnType& column , size_t row) {
-            const T value(column->At(row));
-            if (!state.has_value || state.result > value) {
-                state.has_value = true;
-                state.result = value;
-            }
+            UpdateValue(state , column->At(row));
         }
 
         static inline ResultType Finalize(const StateType& state) {
@@ -234,22 +237,29 @@ namespace Aggregation {
     template <StringType T>
     struct MaxOperator<T> {
         struct StateType {
-            T result;
+            std::string storage;
+            GermanStr result;
             bool has_value = false;
         };
-        using ResultType = T;
+        using ResultType = GermanStr;
         
         static StateType Init() {
             return {};
         }
 
+        static inline void UpdateValue(StateType& state , GermanStr value) {
+            if (!state.has_value || state.result < value) {
+                state.has_value = true;
+                std::string_view view = value.View();
+                state.storage.assign(view.data() , view.size());
+                state.result = GermanStr(state.storage.data() , state.storage.size());
+            }
+        }
+
         template <typename ColumnType>
         static inline void UpdateFull(StateType& state , const ColumnType& column) {
             for (size_t i = 0; i < column->Size(); ++i) {
-                if (!state.has_value || (state.has_value && state.result < column->At(i))) {
-                    state.has_value = true;
-                    state.result = column->At(i);
-                }
+                UpdateValue(state , column->At(i));
             }
         }
 
@@ -259,20 +269,15 @@ namespace Aggregation {
                 throw std::runtime_error("MaxOperator mask size mismatch!");
             }
             for (size_t i = 0; i < column->Size(); ++i) {
-                if (mask[i] && (!state.has_value || (state.has_value && state.result < column->At(i)))) {
-                    state.has_value = true;
-                    state.result = column->At(i);
+                if (mask[i]) {
+                    UpdateValue(state , column->At(i));
                 }
             }
         }
 
         template <typename ColumnType>
         static inline void UpdateRow(StateType& state , const ColumnType& column , size_t row) {
-            const T value(column->At(row));
-            if (!state.has_value || state.result < value) {
-                state.has_value = true;
-                state.result = value;
-            }
+            UpdateValue(state , column->At(row));
         }
 
         static inline ResultType Finalize(const StateType& state) {
@@ -387,7 +392,7 @@ namespace Aggregation {
     template <StringType T>
     struct CountDistinctOperator<T> {
         struct StateType {
-            absl::flat_hash_set<std::string_view> storage;
+            absl::flat_hash_set<GermanStr , GermanStrHash , GermanStrEq> storage;
             Utility::StringArena arena;
         };
         using ResultType = int64_t;
@@ -396,9 +401,9 @@ namespace Aggregation {
             return {};
         }
 
-        static inline void Insert(StateType& state , std::string_view value) {
+        static inline void Insert(StateType& state , const GermanStr& value) {
             if (!state.storage.contains(value)) {
-                state.storage.insert(state.arena.Add(value));
+                state.storage.insert(GermanStr(state.arena.Add(value)));
             }
         }
 

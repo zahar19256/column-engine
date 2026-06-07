@@ -30,6 +30,7 @@ public:
     const Scheme& GetScheme() const;
     const boost::dynamic_bitset<>& GetMsk() const;
     Utility::StringArena* GetStringArena();
+    const Utility::StringArena* GetStringArena() const;
     size_t GetRows() const;
     std::shared_ptr<Column> GetColumn(size_t index) const;
     std::shared_ptr<Column> GetColumn(const std::string& column_name) const;

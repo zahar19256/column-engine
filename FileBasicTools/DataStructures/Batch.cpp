@@ -123,6 +123,10 @@ Utility::StringArena* Batch::GetStringArena() {
     return &string_arena_;
 }
 
+const Utility::StringArena* Batch::GetStringArena() const {
+    return &string_arena_;
+}
+
 const Scheme& Batch::GetScheme() const {
     return scheme_;
 }

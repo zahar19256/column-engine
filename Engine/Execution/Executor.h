@@ -110,8 +110,10 @@ public:
         }
         Batch input;
         while (child->Next(input)) {
+            Utility::StringArena expr_arena;
+            EvalContext env(&expr_arena);
             for (size_t i = 0; i < states_.size(); ++i) {
-                const std::shared_ptr<Column> column = calls_[i].expression ? calls_[i].expression->EvalBatch(input , env_) : nullptr;
+                const std::shared_ptr<Column> column = calls_[i].expression ? calls_[i].expression->EvalBatch(input , env) : nullptr;
                 states_[i]->UpdateBatch(column.get() , input.GetRows() , input.GetMsk());
             }
         }
@@ -125,8 +127,6 @@ private:
 
     bool finished_ = false;
     std::vector<std::unique_ptr<Aggregation::AggregationState>> states_;
-
-    EvalContext env_;
 };
 
 class GroupByAggregationExecutor : public AggregationExecutorBase {
@@ -146,7 +146,7 @@ private:
     std::vector<std::shared_ptr<ScalarExpr>> group_by_;
     absl::flat_hash_map <Utility::GroupKey , AggrState , Utility::GroupHash> storage_;
     bool finished_ = false;
-    EvalContext env_;
+    Utility::StringArena arena_;
 };
 
 class ProjectionExecutor : public Executor {

@@ -22,6 +22,20 @@ public:
             low_ = reinterpret_cast<uint64_t>(start);
         }
     }
+    GermanStr(std::string_view str) {
+        const char* start = str.data();
+        size_t size = str.size();
+        if (size <= 12) {
+            high_ = static_cast<uint32_t>(size);
+            low_ = 0;
+            memcpy(reinterpret_cast<char*>(this) + 4 , start , size);
+        } else {
+            uint32_t prefix = 0;
+            memcpy(&prefix, start, 4);
+            high_ = static_cast<uint32_t>(size) | (static_cast<uint64_t>(prefix) << 32);
+            low_ = reinterpret_cast<uint64_t>(start);
+        }
+    }
 
     GermanStr(GermanStr&& other) : high_(std::move(other.high_)) , low_(std::move(other.low_)) {
     }
@@ -72,6 +86,24 @@ public:
     }
     inline bool operator>=(std::string_view other) const noexcept {
         return Compare(other) >= 0;
+    }
+
+    inline bool operator==(const GermanStr& other) const noexcept {
+        if (high_ != other.high_) {
+            return false;
+        }
+        size_t sz = Size();
+        if (sz <= 12) {
+            return low_ == other.low_;
+        }
+        if (GetPref() != other.GetPref()) {
+            return false;
+        }
+        return memcmp(Data(), other.Data(), sz) == 0;
+    }
+
+    inline bool operator!=(const GermanStr& other) const noexcept {
+        return !(*this == other);
     }
 
     inline bool operator==(std::string_view other) const noexcept {
@@ -131,3 +163,15 @@ inline bool operator==(std::string_view lhs, const GermanStr& rhs) noexcept {
 inline bool operator!=(std::string_view lhs, const GermanStr& rhs) noexcept {
     return !(rhs == lhs);
 }
+
+struct GermanStrEq {
+    bool operator()(const GermanStr& lhs, const GermanStr& rhs) const noexcept {
+        return lhs == rhs;
+    }
+};
+
+struct GermanStrHash {
+    size_t operator()(const GermanStr& value) const noexcept {
+        return std::hash<std::string_view>{}(value.View()); // TODO можно улучшить если сделать fast-hash для мини строк 
+    }
+};

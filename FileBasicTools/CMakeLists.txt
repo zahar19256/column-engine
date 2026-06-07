@@ -24,6 +24,8 @@ set(DATASTRUCT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/DataStructures/GermanString.cpp
 )
 
+find_package(absl REQUIRED)
+
 add_library(data_structures ${DATASTRUCT_SOURCES})
 target_include_directories(data_structures
     PUBLIC
@@ -87,7 +89,12 @@ if(FILE_BASIC_TOOLS_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/bench.cpp
     )
 
+    add_executable(test_scan
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/scan_bench.cpp
+    )
+
     target_compile_options(test_bench PRIVATE -O3 -march=native -mtune=native)
+    target_compile_options(test_scan PRIVATE -O3 -march=native -mtune=native)
 
     target_link_libraries(test_data_structures
         PRIVATE
@@ -110,9 +117,20 @@ if(FILE_BASIC_TOOLS_BUILD_TESTS)
             file_tools
             GTest::gtest
             GTest::gtest_main
+            absl::flat_hash_map
+            absl::hash
+    )
+
+    target_link_libraries(test_scan
+        PRIVATE
+            data_structures
+            file_tools
+            GTest::gtest
+            GTest::gtest_main
     )
 
     add_test(NAME test_src COMMAND test_src)
     add_test(NAME test_bench COMMAND test_bench)
+    add_test(NAME test_scan COMMAND test_scan)
     add_test(NAME test_data_structures COMMAND test_data_structures)
 endif()

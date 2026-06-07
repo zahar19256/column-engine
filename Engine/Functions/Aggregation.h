@@ -8,6 +8,8 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <type_traits>
 
 namespace Aggregation {
     enum class AggregationType : uint8_t {
@@ -71,7 +73,13 @@ namespace Aggregation {
             if (result == nullptr) {
                 throw std::runtime_error("Aggregation output column type mismatch!");
             }
-            result->Push_Back(Operator::Finalize(state_));
+            if constexpr (std::is_same_v<OutputColumnT , StringColumn>) {
+                GermanStr value = Operator::Finalize(state_);
+                std::string_view view = value.View();
+                result->AppendFromString(view.data() , view.size());
+            } else {
+                result->Push_Back(Operator::Finalize(state_));
+            }
         }
 
         ColumnType FinalType() const override {

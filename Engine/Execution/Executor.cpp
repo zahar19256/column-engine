@@ -1,5 +1,7 @@
 #include "Executor.h"
+#include "Column.h"
 #include "Functions/Aggregation.h"
+#include "Functions/Expression.h"
 #include "GermanString.h"
 #include "Utility.h"
 
@@ -14,7 +16,7 @@ ColumnType ScalarValueType(const Utility::ScalarValue& value) {
         using T = std::decay_t<decltype(item)>;
         if constexpr (std::is_same_v<T, int64_t>) {
             return ColumnType::Int64;
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        } else if constexpr (std::is_same_v<T, GermanStr>) {
             return ColumnType::String;
         } else if constexpr (std::is_same_v<T, double>) {
             return ColumnType::Double;
@@ -77,7 +79,7 @@ void AppendScalarValue(Column& column , const Utility::ScalarValue& value) {
             throw std::runtime_error("Group by key value is not Double!");
         case ColumnType::String:
             if (const auto* current = std::get_if<GermanStr>(&value)) {
-                PushTypedValue<StringColumn>(column , *current);
+                dynamic_cast<StringColumn*>(&column)->AppendFromString(current->View().data() , current->Size());
                 return;
             }
             throw std::runtime_error("Group by key value is not String!");
@@ -130,14 +132,15 @@ bool GroupByAggregationExecutor::Next(Batch& data) {
     Batch input;
     while (child->Next(input)) {
         std::vector<std::shared_ptr<Column>> group_columns;
+        EvalContext env = {input.GetStringArena()};
         group_columns.reserve(group_by_.size());
         for (const auto& expr : group_by_) {
-            group_columns.push_back(expr->EvalBatch(input , env_));
+            group_columns.push_back(expr->EvalBatch(input , env));
         }
         std::vector<std::shared_ptr<Column>> aggregate_columns;
         aggregate_columns.reserve(calls_.size());
         for (const AggregationCall& call : calls_) {
-            aggregate_columns.push_back(call.expression ? call.expression->EvalBatch(input , env_) : nullptr);
+            aggregate_columns.push_back(call.expression ? call.expression->EvalBatch(input , env) : nullptr);
         }
 
         const auto& mask = input.GetMsk();
@@ -149,7 +152,14 @@ bool GroupByAggregationExecutor::Next(Batch& data) {
             Utility::GroupKey key;
             key.reserve(group_by_.size());
             for (const auto& column : group_columns) {
-                key.push_back(column->GetScalarValue(row_index));
+                auto value = column->GetScalarValue(row_index);
+                if (auto* s = std::get_if<GermanStr>(&value)) {
+                    auto view = s->View();
+                    auto stored = arena_.Add(view.data(), view.size());
+                    key.emplace_back(GermanStr(stored.data(), stored.size()));
+                } else {
+                    key.push_back(value);
+                }
             }
             auto [it , added] = storage_.try_emplace(std::move(key));
             if (added) {
