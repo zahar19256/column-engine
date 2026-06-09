@@ -10,6 +10,10 @@
 class Batch {
 public:
     Batch() = default;
+    Batch(const Batch&) = delete;
+    Batch& operator=(const Batch&) = delete;
+    Batch(Batch&&) noexcept = default;
+    Batch& operator=(Batch&&) noexcept = default;
     Batch(const StringBacket& chunk , const Scheme& scheme) : scheme_(scheme) {
         ChunkToBatch(chunk);
     }
@@ -40,9 +44,10 @@ public:
     void Clear();
     void Reset();
 private:
+    void EnsureStringArena();
     void ChunkToBatch(const StringBacket& chunk);
     Scheme scheme_;
-    Utility::StringArena string_arena_;
+    std::unique_ptr<Utility::StringArena> string_arena_ = std::make_unique<Utility::StringArena>();
     std::vector <std::shared_ptr<Column>> data_;
     boost::dynamic_bitset<> mask_;
     bool has_mask_ = false;

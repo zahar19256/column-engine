@@ -12,6 +12,33 @@
 #include <type_traits>
 
 namespace Aggregation {
+    template <typename ColumnT>
+    constexpr ColumnType StaticColumnType() {
+        if constexpr (std::is_same_v<ColumnT , Int8Column>) {
+            return ColumnType::Int8;
+        } else if constexpr (std::is_same_v<ColumnT , Int16Column>) {
+            return ColumnType::Int16;
+        } else if constexpr (std::is_same_v<ColumnT , Int32Column>) {
+            return ColumnType::Int32;
+        } else if constexpr (std::is_same_v<ColumnT , Int64Column>) {
+            return ColumnType::Int64;
+        } else if constexpr (std::is_same_v<ColumnT , Int128Column>) {
+            return ColumnType::Int128;
+        } else if constexpr (std::is_same_v<ColumnT , DoubleColumn>) {
+            return ColumnType::Double;
+        } else if constexpr (std::is_same_v<ColumnT , DateColumn>) {
+            return ColumnType::Date;
+        } else if constexpr (std::is_same_v<ColumnT , TimeStampColumn>) {
+            return ColumnType::Timestamp;
+        } else if constexpr (std::is_same_v<ColumnT , StringColumn>) {
+            return ColumnType::String;
+        } else if constexpr (std::is_same_v<ColumnT , FlatStringColumn>) {
+            return ColumnType::FlatString;
+        } else {
+            return ColumnType::Unknown;
+        }
+    }
+
     enum class AggregationType : uint8_t {
         Sum = 0,
         Min,
@@ -83,7 +110,7 @@ namespace Aggregation {
         }
 
         ColumnType FinalType() const override {
-            return OutputColumnT{}.GetType();
+            return StaticColumnType<OutputColumnT>();
         }
 
     private:

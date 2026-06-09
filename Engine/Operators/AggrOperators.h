@@ -403,7 +403,7 @@ namespace Aggregation {
 
         static inline void Insert(StateType& state , const GermanStr& value) {
             if (!state.storage.contains(value)) {
-                state.storage.insert(GermanStr(state.arena.Add(value)));
+                state.storage.insert(GermanStr(state.arena.Add(value.View())));
             }
         }
 

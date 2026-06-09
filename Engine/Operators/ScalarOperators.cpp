@@ -63,11 +63,9 @@ std::shared_ptr<Column> Length(std::shared_ptr<Column> current) {
     }
     std::shared_ptr<Int64Column> result = std::make_shared<Int64Column>();
     result->Reserve(current->Size());
-    const auto& data = As<StringColumn>(current)->GetOffsetPointer();
-    size_t last = 0;
+    const auto source = As<StringColumn>(current);
     for (size_t i = 0; i < current->Size(); ++i) {
-        result->Push_Back(data[i] - last);
-        last = data[i];
+        result->Push_Back(static_cast<int64_t>(source->At(i).Size()));
     }
     return result;
 }
@@ -75,7 +73,8 @@ std::shared_ptr<Column> Length(std::shared_ptr<Column> current) {
 std::shared_ptr<Column> ApplyRegexpReplace(
     std::shared_ptr<Column> current ,
     const std::string& pattern ,
-    const std::string& replacement) {
+    const std::string& replacement ,
+    Utility::StringArena* arena) {
     if (current->GetType() != ColumnType::String) {
         throw std::runtime_error("Not string column in RegReplace scalar operator!");
     }
@@ -84,12 +83,12 @@ std::shared_ptr<Column> ApplyRegexpReplace(
         throw std::runtime_error("Invalid RegReplace regex: " + regex.error());
     }
     std::shared_ptr<StringColumn> source = As<StringColumn>(current);
-    std::shared_ptr<StringColumn> result = std::make_shared<StringColumn>();
+    std::shared_ptr<StringColumn> result = std::make_shared<StringColumn>(arena);
     result->Reserve(source->Size());
     for (size_t i = 0; i < source->Size(); ++i) {
-        std::string value(source->At(i));
+        std::string value(source->At_view(i));
         RE2::GlobalReplace(&value , regex , replacement);
-        result->Push_Back(value);
+        result->AppendFromString(value.data() , value.size());
     }
     return result;
 }

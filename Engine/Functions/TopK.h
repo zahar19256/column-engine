@@ -159,6 +159,8 @@ public:
         index.reserve(data.GetRows());
         classes.reserve(data.GetRows());
         keys.reserve(order.size());
+        Utility::StringArena expr_arena;
+        EvalContext env{&expr_arena};
         bool use_mask = !mask.empty() && mask.count() != mask.size();
         for (size_t i = 0; i < data.GetRows(); ++i) {
             if (!use_mask || mask[i]) {
@@ -167,7 +169,7 @@ public:
             }
         }
         for (size_t expr_index = 0; expr_index < order.size(); ++expr_index) {
-            std::shared_ptr<Column> col = order[expr_index]->EvalBatch(data);
+            std::shared_ptr<Column> col = order[expr_index]->EvalBatch(data , env);
             keys.push_back(col);
             const SortDirection direction =
                 expr_index < directions_.size() ? directions_[expr_index] : SortDirection::Asc;
@@ -192,6 +194,9 @@ public:
     }
     const Batch& Result() const {
         return result_.data;
+    }
+    Batch TakeResult() {
+        return std::move(result_.data);
     }
     const Batch& Keys() const {
         return result_.keys;

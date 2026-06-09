@@ -33,7 +33,7 @@ inline std::shared_ptr<ScalarExpr> MakeColumnExpr(std::string column_name , Colu
     return std::make_shared<ColumnExpr>(std::move(column_name) , type);
 }
 
-inline std::shared_ptr<ScalarExpr> MakeLiteralExpr(Utility::ScalarValue value , ColumnType type = ColumnType::Unknown) {
+inline std::shared_ptr<ScalarExpr> MakeLiteralExpr(Utility::LiteralValue value , ColumnType type = ColumnType::Unknown) {
     return std::make_shared<LiteralExpr>(std::move(value) , type);
 }
 

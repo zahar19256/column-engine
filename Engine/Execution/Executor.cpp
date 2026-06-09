@@ -342,7 +342,7 @@ bool OrderByExecutor::Next(Batch& data) {
     while (child->Next(input)) {
         sorter.UpdateBatch(order_expr_ , input);
     }
-    data = sorter.Result();
+    data = sorter.TakeResult();
     finished_ = true;
     return data.GetRows() != 0;
 }

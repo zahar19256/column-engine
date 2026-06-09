@@ -29,6 +29,7 @@ void DispatchTopK(std::shared_ptr<Column> col , std::vector<size_t>& index , std
         case ColumnType::String:
             TypedTopK<StringColumn>(As<StringColumn>(col) , index , classes , limit , direction);
             break;
+        case ColumnType::FlatString:
         case ColumnType::Unknown:
             throw std::runtime_error("Unknown column type in TopK dispatcher!");
     }
@@ -44,7 +45,8 @@ void AppendTypedValue(const std::shared_ptr<Column>& source , const std::shared_
         throw std::runtime_error("TopK column type mismatch!");
     }
     if constexpr (std::is_same_v<ColumnT , StringColumn>) {
-        typed_target->Push_Back(std::string(typed_source->At(row)));
+        const std::string_view value = typed_source->At_view(row);
+        typed_target->AppendFromString(value.data() , value.size());
     } else {
         typed_target->Push_Back(typed_source->At(row));
     }
@@ -85,6 +87,7 @@ void AppendColumnValue(const std::shared_ptr<Column>& source , const std::shared
         case ColumnType::Timestamp:
             AppendTypedValue<TimeStampColumn>(source , target , row);
             return;
+        case ColumnType::FlatString:
         case ColumnType::Unknown:
             break;
     }
@@ -130,25 +133,28 @@ bool RowBetter(const Batch& left , size_t left_row , const Batch& right , size_t
     return false;
 }
 
-std::vector<std::shared_ptr<Column>> MakeColumns(const Batch& batch , size_t rows) {
+std::vector<std::shared_ptr<Column>> MakeColumns(const Batch& batch , size_t rows , Utility::StringArena* arena) {
     std::vector<std::shared_ptr<Column>> result;
     result.reserve(batch.Size());
     for (size_t column_index = 0; column_index < batch.Size(); ++column_index) {
-        auto column = MakeColumn(batch.GetType(column_index));
+        auto column = MakeColumn(batch.GetType(column_index) , arena);
         column->Reserve(rows);
         result.push_back(std::move(column));
     }
     return result;
 }
 
-std::vector<std::shared_ptr<Column>> MakeKeyColumns(const std::vector<std::shared_ptr<Column>>& keys , size_t rows) {
+std::vector<std::shared_ptr<Column>> MakeKeyColumns(
+    const std::vector<std::shared_ptr<Column>>& keys ,
+    size_t rows ,
+    Utility::StringArena* arena) {
     std::vector<std::shared_ptr<Column>> result;
     result.reserve(keys.size());
     for (const auto& key : keys) {
         if (!key) {
             throw std::runtime_error("Null TopK key column!");
         }
-        auto column = MakeColumn(key->GetType());
+        auto column = MakeColumn(key->GetType() , arena);
         column->Reserve(rows);
         result.push_back(std::move(column));
     }
@@ -167,7 +173,6 @@ Scheme MakeKeyScheme(const std::vector<std::shared_ptr<Column>>& keys) {
 }
 
 void BuildBatch(Batch& batch , const Scheme& scheme , std::vector<std::shared_ptr<Column>>& columns , size_t rows) {
-    batch.Clear();
     batch.SetScheme(scheme);
     for (auto& column : columns) {
         batch.AddColumn(std::move(column));
@@ -207,8 +212,8 @@ void MaterializeTopK(
     result.data.Clear();
     result.keys.Clear();
     const size_t result_size = std::min(limit , index.size());
-    std::vector<std::shared_ptr<Column>> data_columns = MakeColumns(data , result_size);
-    std::vector<std::shared_ptr<Column>> key_columns = MakeKeyColumns(keys , result_size);
+    std::vector<std::shared_ptr<Column>> data_columns = MakeColumns(data , result_size , result.data.GetStringArena());
+    std::vector<std::shared_ptr<Column>> key_columns = MakeKeyColumns(keys , result_size , result.keys.GetStringArena());
     for (size_t pos = 0; pos < result_size; ++pos) {
         const size_t row_index = index[pos];
         if (row_index >= data.GetRows()) {
@@ -239,8 +244,6 @@ void Merge(
     }
     if (left.data.GetRows() == 0) {
         left = std::move(right);
-        right.data.Clear();
-        right.keys.Clear();
         return;
     }
     if (right.data.GetRows() == 0) {
@@ -248,8 +251,8 @@ void Merge(
     }
     TopKBatch result;
     const size_t result_limit = std::min(limit , left.data.GetRows() + right.data.GetRows());
-    std::vector<std::shared_ptr<Column>> data_columns = MakeColumns(left.data , result_limit);
-    std::vector<std::shared_ptr<Column>> key_columns = MakeColumns(left.keys , result_limit);
+    std::vector<std::shared_ptr<Column>> data_columns = MakeColumns(left.data , result_limit , result.data.GetStringArena());
+    std::vector<std::shared_ptr<Column>> key_columns = MakeColumns(left.keys , result_limit , result.keys.GetStringArena());
     size_t left_index = 0;
     size_t right_index = 0;
     size_t result_size = 0;

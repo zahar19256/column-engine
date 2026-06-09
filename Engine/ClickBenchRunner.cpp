@@ -14,6 +14,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
@@ -159,7 +160,7 @@ std::string TimestampToString(int64_t timestamp) {
     return out.str();
 }
 
-void WriteEscaped(std::ofstream& out , const std::string& value) {
+void WriteEscaped(std::ofstream& out , std::string_view value) {
     bool needs_quotes = false;
     for (const char item : value) {
         if (item == ',' || item == '\n' || item == '\r' || item == '"') {
@@ -205,7 +206,7 @@ void WriteValue(std::ofstream& out , const std::shared_ptr<Column>& column , siz
             out << std::setprecision(17) << As<DoubleColumn>(column)->At(row);
             return;
         case ColumnType::String:
-            WriteEscaped(out , std::string(As<StringColumn>(column)->At(row)));
+            WriteEscaped(out , As<StringColumn>(column)->At_view(row));
             return;
         case ColumnType::Date:
             out << DateToString(As<DateColumn>(column)->At(row));

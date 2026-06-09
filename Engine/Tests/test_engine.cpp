@@ -19,7 +19,7 @@ public:
             return false;
         }
 
-        data = batch_;
+        data = std::move(batch_);
         done_ = true;
         return true;
     }
@@ -76,14 +76,13 @@ Batch MakeMixedBatch() {
     values->Push_Back(30);
     values->Push_Back(40);
 
-    auto names = std::make_shared<StringColumn>();
-    names->Push_Back("a");
-    names->Push_Back("b");
-    names->Push_Back("c");
-    names->Push_Back("d");
-
     Batch batch;
     batch.SetScheme(scheme);
+    auto names = std::make_shared<StringColumn>(batch.GetStringArena());
+    names->AppendFromString("a" , 1);
+    names->AppendFromString("b" , 1);
+    names->AppendFromString("c" , 1);
+    names->AppendFromString("d" , 1);
     batch.AddColumn(values);
     batch.AddColumn(names);
     batch.InitMsk();
@@ -94,13 +93,12 @@ Batch MakeStringBatch() {
     Scheme scheme;
     scheme.Push_Back(SchemeNode{"name", ColumnType::String});
 
-    auto names = std::make_shared<StringColumn>();
-    names->Push_Back("");
-    names->Push_Back("abc");
-    names->Push_Back("x");
-
     Batch batch;
     batch.SetScheme(scheme);
+    auto names = std::make_shared<StringColumn>(batch.GetStringArena());
+    names->AppendFromString("" , 0);
+    names->AppendFromString("abc" , 3);
+    names->AppendFromString("x" , 1);
     batch.AddColumn(names);
     batch.InitMsk();
     return batch;
@@ -234,10 +232,11 @@ TEST(Column, AssignFillsTypedColumns) {
     ASSERT_EQ(double_values.Size(), 2);
     EXPECT_DOUBLE_EQ(double_values.At(1), 1.5);
 
-    StringColumn string_values;
-    string_values.Assign(2, "literal");
+    Utility::StringArena arena;
+    StringColumn string_values(&arena);
+    string_values.Assign(2, GermanStr(std::string_view("literal")));
     ASSERT_EQ(string_values.Size(), 2);
-    EXPECT_EQ(string_values.At(1), "literal");
+    EXPECT_EQ(string_values.At_view(1), "literal");
 
     DateColumn date_values;
     date_values.Assign(2, Data::ParseDate("2013-07-15"));
@@ -253,7 +252,9 @@ TEST(Column, AssignFillsTypedColumns) {
 TEST(LiteralExpr, EvalBatchReturnsFilledTypedColumn) {
     LiteralExpr literal(int64_t{42}, ColumnType::Int16);
 
-    const auto result = As<Int16Column>(literal.EvalBatch(MakeInt64Batch()));
+    Batch batch = MakeInt64Batch();
+    EvalContext env{batch.GetStringArena()};
+    const auto result = As<Int16Column>(literal.EvalBatch(batch , env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 42);
@@ -263,7 +264,9 @@ TEST(LiteralExpr, EvalBatchReturnsFilledTypedColumn) {
 TEST(LiteralExpr, InfersTypeAndRebuildsColumnPerBatch) {
     LiteralExpr string_literal(std::string("x"));
 
-    const auto first = As<StringColumn>(string_literal.EvalBatch(MakeInt64Batch()));
+    Batch first_batch = MakeInt64Batch();
+    EvalContext first_env{first_batch.GetStringArena()};
+    const auto first = As<StringColumn>(string_literal.EvalBatch(first_batch , first_env));
     ASSERT_NE(first, nullptr);
     ASSERT_EQ(first->Size(), 3);
     EXPECT_EQ(first->At(0), "x");
@@ -271,7 +274,9 @@ TEST(LiteralExpr, InfersTypeAndRebuildsColumnPerBatch) {
 
     boost::dynamic_bitset<> mask(1);
     mask.set();
-    const auto second = As<StringColumn>(string_literal.EvalBatch(MakeInt64Batch(mask)));
+    Batch second_batch = MakeInt64Batch(mask);
+    EvalContext second_env{second_batch.GetStringArena()};
+    const auto second = As<StringColumn>(string_literal.EvalBatch(second_batch , second_env));
     ASSERT_NE(second, nullptr);
     ASSERT_EQ(second->Size(), 3);
     EXPECT_EQ(second->At(1), "x");
@@ -281,7 +286,9 @@ TEST(UnaryExpr, LengthReturnsStringSizes) {
     auto length_expr = MakeLengthExpr(MakeColumnExpr("name", ColumnType::String));
 
     EXPECT_EQ(length_expr->GetType(), ColumnType::Int64);
-    const auto result = As<Int64Column>(length_expr->EvalBatch(MakeStringBatch()));
+    Batch batch = MakeStringBatch();
+    EvalContext env{batch.GetStringArena()};
+    const auto result = As<Int64Column>(length_expr->EvalBatch(batch , env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 0);
@@ -293,13 +300,12 @@ TEST(UnaryExpr, RegexpReplaceRewritesStringColumn) {
     Scheme scheme;
     scheme.Push_Back(SchemeNode{"referer", ColumnType::String});
 
-    auto referers = std::make_shared<StringColumn>();
-    referers->Push_Back("https://www.example.com/path");
-    referers->Push_Back("http://openai.com/docs");
-    referers->Push_Back("plain");
-
     Batch batch;
     batch.SetScheme(scheme);
+    auto referers = std::make_shared<StringColumn>(batch.GetStringArena());
+    referers->AppendFromString("https://www.example.com/path" , 28);
+    referers->AppendFromString("http://openai.com/docs" , 22);
+    referers->AppendFromString("plain" , 5);
     batch.AddColumn(referers);
     batch.InitMsk();
 
@@ -309,7 +315,8 @@ TEST(UnaryExpr, RegexpReplaceRewritesStringColumn) {
         R"(\1)");
 
     EXPECT_EQ(expression->GetType(), ColumnType::String);
-    const auto result = As<StringColumn>(expression->EvalBatch(batch));
+    EvalContext env{batch.GetStringArena()};
+    const auto result = As<StringColumn>(expression->EvalBatch(batch , env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), "example.com");
@@ -324,7 +331,9 @@ TEST(BinaryExpr, SubtractsLiteralFromColumn) {
         ColumnType::Int64);
 
     EXPECT_EQ(sub_expr->GetType(), ColumnType::Int64);
-    const auto result = As<Int64Column>(sub_expr->EvalBatch(MakeInt64Batch()));
+    Batch batch = MakeInt64Batch();
+    EvalContext env{batch.GetStringArena()};
+    const auto result = As<Int64Column>(sub_expr->EvalBatch(batch , env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 7);
@@ -344,7 +353,9 @@ TEST(CaseWhenExpr, SelectsFirstMatchingBranchAndElse) {
         ColumnType::String);
 
     EXPECT_EQ(case_expr->GetType(), ColumnType::String);
-    const auto result = As<StringColumn>(case_expr->EvalBatch(MakeMixedBatch()));
+    Batch batch = MakeMixedBatch();
+    EvalContext env{batch.GetStringArena()};
+    const auto result = As<StringColumn>(case_expr->EvalBatch(batch , env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 4);
     EXPECT_EQ(result->At(0), "");
@@ -609,10 +620,11 @@ TEST(OrderByExecutor, UsesEquivalenceClassesAcrossSortKeys) {
 }
 
 TEST(FilterExecutor, LikeMatchesSqlWildcards) {
-    auto values = std::make_shared<StringColumn>();
-    values->Push_Back("https://example.com/search");
-    values->Push_Back("http://example.com/search");
-    values->Push_Back("https://example.com/about");
+    Utility::StringArena arena;
+    auto values = std::make_shared<StringColumn>(&arena);
+    values->AppendFromString("https://example.com/search" , 26);
+    values->AppendFromString("http://example.com/search" , 25);
+    values->AppendFromString("https://example.com/about" , 25);
 
     const boost::dynamic_bitset<> result = Filters::ColumnTypedFilter(
         *values,
@@ -626,11 +638,12 @@ TEST(FilterExecutor, LikeMatchesSqlWildcards) {
 }
 
 TEST(FilterExecutor, LikeSupportsSingleCharacterWildcardAndEscapes) {
-    auto values = std::make_shared<StringColumn>();
-    values->Push_Back("ab");
-    values->Push_Back("ac");
-    values->Push_Back("a_");
-    values->Push_Back("a%");
+    Utility::StringArena arena;
+    auto values = std::make_shared<StringColumn>(&arena);
+    values->AppendFromString("ab" , 2);
+    values->AppendFromString("ac" , 2);
+    values->AppendFromString("a_" , 2);
+    values->AppendFromString("a%" , 2);
 
     const boost::dynamic_bitset<> single_char = Filters::ColumnTypedFilter(
         *values,
@@ -664,11 +677,12 @@ TEST(FilterExecutor, LikeSupportsSingleCharacterWildcardAndEscapes) {
 }
 
 TEST(FilterExecutor, LikeUsesSimpleStringFastPaths) {
-    auto values = std::make_shared<StringColumn>();
-    values->Push_Back("https://google.com/search");
-    values->Push_Back("https://example.com/google");
-    values->Push_Back("http://example.com");
-    values->Push_Back("plain");
+    Utility::StringArena arena;
+    auto values = std::make_shared<StringColumn>(&arena);
+    values->AppendFromString("https://google.com/search" , 25);
+    values->AppendFromString("https://example.com/google" , 26);
+    values->AppendFromString("http://example.com" , 18);
+    values->AppendFromString("plain" , 5);
 
     const boost::dynamic_bitset<> contains = Filters::ColumnTypedFilter(
         *values,

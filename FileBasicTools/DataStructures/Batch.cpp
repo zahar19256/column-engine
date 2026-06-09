@@ -7,12 +7,19 @@
 #include <stdexcept>
 #include <string>
 
+void Batch::EnsureStringArena() {
+    if (string_arena_ == nullptr) {
+        string_arena_ = std::make_unique<Utility::StringArena>();
+    }
+}
+
 void Batch::ChunkToBatch(const StringBacket& chunk) {
+    EnsureStringArena();
     if (chunk.Empty()) {
         return;
     }
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column) , &string_arena_);
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column) , string_arena_.get());
         if (scheme_.GetType(column) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(column) + " type!");
         }
@@ -25,9 +32,10 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
 }
 
 void Batch::Init() {
+    EnsureStringArena();
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i) , &string_arena_);
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i) , string_arena_.get());
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -36,6 +44,7 @@ void Batch::Init() {
 }
 
 void Batch::Init(const Scheme& scheme , bool convert) {
+    EnsureStringArena();
     scheme_ = scheme;
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
@@ -43,7 +52,7 @@ void Batch::Init(const Scheme& scheme , bool convert) {
         if (convert && type == ColumnType::String) {
             type = ColumnType::FlatString;
         }
-        std::shared_ptr<Column> storage = MakeColumn(type , &string_arena_);
+        std::shared_ptr<Column> storage = MakeColumn(type , string_arena_.get());
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -120,11 +129,12 @@ const boost::dynamic_bitset<>& Batch::GetMsk() const {
 }
 
 Utility::StringArena* Batch::GetStringArena() {
-    return &string_arena_;
+    EnsureStringArena();
+    return string_arena_.get();
 }
 
 const Utility::StringArena* Batch::GetStringArena() const {
-    return &string_arena_;
+    return string_arena_.get();
 }
 
 const Scheme& Batch::GetScheme() const {
@@ -140,8 +150,9 @@ bool Batch::Empty() const {
 }
 
 void Batch::Clear() {
+    EnsureStringArena();
     data_.clear();
-    string_arena_.Clear();
+    string_arena_->Clear();
     scheme_.Clear();
     mask_.clear();
     has_mask_ = false;
@@ -149,10 +160,11 @@ void Batch::Clear() {
 }
 
 void Batch::Reset() {
+    EnsureStringArena();
     for (size_t i = 0; i < scheme_.Size(); ++i) {
         data_[i]->Clear();
     }
-    string_arena_.Clear();
+    string_arena_->Clear();
     rows_ = 0;
 }
 

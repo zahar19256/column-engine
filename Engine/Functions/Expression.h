@@ -233,7 +233,7 @@ public:
     std::shared_ptr<Column> EvalBatch(const Batch& data , EvalContext& env) const override {
         auto column = column_->EvalBatch(data , env);
         if (type_ == UnaryExprType::RegexpReplace) {
-            return ApplyRegexpReplace(column , *arg1_ , *arg2_);
+            return ApplyRegexpReplace(column , *arg1_ , *arg2_ , env.string_arena);
         }
         return ApplyUnaryOp(type_ , column);
     }

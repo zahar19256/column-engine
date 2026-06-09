@@ -48,4 +48,4 @@ concept NumericColumn = HasValueType<T> && (
 std::shared_ptr<Column> ApplyBinaryOp(BinaryExprType op , std::shared_ptr<Column> left , std::shared_ptr<Column> right , ColumnType result_type);
 
 std::shared_ptr<Column> ApplyUnaryOp(UnaryExprType op , std::shared_ptr<Column> current);
-std::shared_ptr<Column> ApplyRegexpReplace(std::shared_ptr<Column> current , const std::string& pattern , const std::string& replacement);
+std::shared_ptr<Column> ApplyRegexpReplace(std::shared_ptr<Column> current , const std::string& pattern , const std::string& replacement , Utility::StringArena* arena);

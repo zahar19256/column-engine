@@ -58,6 +58,8 @@ target_include_directories(file_tools
 target_link_libraries(file_tools
     PUBLIC
         data_structures
+        absl::flat_hash_map
+        absl::hash
 )
 
 if(FILE_BASIC_TOOLS_BUILD_TESTS)

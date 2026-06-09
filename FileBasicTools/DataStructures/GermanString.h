@@ -5,6 +5,8 @@
 #include <string>
 #include <string_view>
 
+struct GermanStrHash;
+
 class GermanStr {
 public:
     GermanStr() {
@@ -105,6 +107,18 @@ public:
     inline bool operator!=(const GermanStr& other) const noexcept {
         return !(*this == other);
     }
+    inline bool operator<(const GermanStr& other) const noexcept {
+        return Compare(other.View()) < 0;
+    }
+    inline bool operator>(const GermanStr& other) const noexcept {
+        return Compare(other.View()) > 0;
+    }
+    inline bool operator<=(const GermanStr& other) const noexcept {
+        return Compare(other.View()) <= 0;
+    }
+    inline bool operator>=(const GermanStr& other) const noexcept {
+        return Compare(other.View()) >= 0;
+    }
 
     inline bool operator==(std::string_view other) const noexcept {
         size_t sz = Size();
@@ -141,6 +155,7 @@ public:
     }
 
 private:
+    friend struct GermanStrHash;
     uint64_t high_;
     uint64_t low_;
 };
@@ -171,7 +186,49 @@ struct GermanStrEq {
 };
 
 struct GermanStrHash {
+    static inline uint64_t Mix(uint64_t value) noexcept {
+        value ^= value >> 30;
+        value *= 0xbf58476d1ce4e5b9ULL;
+        value ^= value >> 27;
+        value *= 0x94d049bb133111ebULL;
+        value ^= value >> 31;
+        return value;
+    }
+
+    static inline uint64_t Read64(const char* data) noexcept {
+        uint64_t value;
+        std::memcpy(&value , data , sizeof(value));
+        return value;
+    }
+
+    static inline uint64_t ReadTail(const char* data , size_t size) noexcept {
+        uint64_t value = 0;
+        std::memcpy(&value , data , size);
+        return value;
+    }
+
     size_t operator()(const GermanStr& value) const noexcept {
-        return std::hash<std::string_view>{}(value.View()); // TODO можно улучшить если сделать fast-hash для мини строк 
+        constexpr uint64_t first_seed = 0x9e3779b97f4a7c15ULL;
+        constexpr uint64_t second_seed = 0xc2b2ae3d27d4eb4fULL;
+        constexpr uint64_t third_seed = 0x165667b19e3779f9ULL;
+
+        const size_t size = value.high_ & ((1ULL << 32) - 1);
+        if (size <= 12) {
+            return static_cast<size_t>(Mix(value.high_ ^ first_seed) ^ Mix(value.low_ + second_seed));
+        }
+
+        const char* data = reinterpret_cast<const char*>(value.low_);
+        uint64_t hash = Mix(value.high_ ^ (static_cast<uint64_t>(size) * first_seed));
+        size_t offset = 4;
+        while (offset + 8 <= size) {
+            hash ^= Mix(Read64(data + offset) + second_seed + offset);
+            hash = (hash << 27) | (hash >> 37);
+            hash = hash * first_seed + third_seed;
+            offset += 8;
+        }
+        if (offset < size) {
+            hash ^= Mix(ReadTail(data + offset , size - offset) + second_seed + offset);
+        }
+        return static_cast<size_t>(Mix(hash));
     }
 };
