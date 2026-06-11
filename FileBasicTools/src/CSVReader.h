@@ -1,28 +1,28 @@
 #pragma once
+#include "Batch.h"
+#include "Row.h"
 #include <cstddef>
-#include <string>
-#include <vector>
 #include <cstdint>
 #include <fstream>
-#include "Row.h"
-#include "Batch.h"
+#include <string>
+#include <vector>
 
 static size_t STANDART_BUCKET_SIZE = 1024 * 1024 * 8;
 static size_t STANDART_ROWS_COUNT = 8192;
 
 class CSVReader {
 public:
-    CSVReader(const std::string& filePath , size_t bucket_size = STANDART_BUCKET_SIZE);
+    CSVReader(const std::string& filePath, size_t bucket_size = STANDART_BUCKET_SIZE);
 
     void BOMHelper();
 
     std::vector<uint8_t> ReadFileData();
 
-    void ReadRowCSV(StringBacket& data , size_t& bytes , char delimetr = ',');
+    void ReadRowCSV(StringBacket& data, size_t& bytes, char delimetr = ',');
 
     std::vector<StringBacket> ReadFullTable(char delimiter = ',');
 
-    void ReadChunk(Batch& data , char delimiter = ',') {
+    void ReadChunk(Batch& data, char delimiter = ',') {
         data_.Clear();
         if (initial_chunk_) {
             BOMHelper();
@@ -31,7 +31,7 @@ public:
         size_t current_size = 0;
         size_t old_size = 0;
         for (size_t num = 0; num < STANDART_ROWS_COUNT; ++num) {
-            ReadRowCSV(data_ , current_size , delimiter);
+            ReadRowCSV(data_, current_size, delimiter);
             if (old_size == current_size) {
                 break;
             }
@@ -43,7 +43,7 @@ public:
         // std::cerr << data.GetRows() << ' ' << data.Size() << std::endl;
     }
 
-    void ReadChunk(std::vector<StringBacket>& data , char delimiter = ',') {
+    void ReadChunk(std::vector<StringBacket>& data, char delimiter = ',') {
         data.clear();
         if (initial_chunk_) {
             BOMHelper();
@@ -54,7 +54,7 @@ public:
         size_t old_size = 0;
         StringBacket Row;
         while (current_size < bucket_size_) {
-            ReadRowCSV(Row , current_size , delimiter);
+            ReadRowCSV(Row, current_size, delimiter);
             if (old_size == current_size) {
                 break;
             }

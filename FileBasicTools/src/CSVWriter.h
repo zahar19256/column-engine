@@ -26,12 +26,10 @@ public:
     void WriteDelimetr(char delimetr = ',');
     void WriteInt64(int64_t data);
     void WriteString(std::string_view data);
-    template <typename T>
-    void WriteData(const T& data , ColumnType type) {
+    template <typename T> void WriteData(const T& data, ColumnType type) {
         if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) {
-            if (type == ColumnType::Int8 || type == ColumnType::Int16 ||
-                type == ColumnType::Int32 || type == ColumnType::Int64 ||
-                type == ColumnType::Date || type == ColumnType::Timestamp) {
+            if (type == ColumnType::Int8 || type == ColumnType::Int16 || type == ColumnType::Int32 ||
+                type == ColumnType::Int64 || type == ColumnType::Date || type == ColumnType::Timestamp) {
                 WriteInt64(static_cast<int64_t>(data));
                 return;
             }

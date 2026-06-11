@@ -1,9 +1,9 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <cstdint>
-#include <cstddef>
 
 static std::string TypeInt8 = "int8";
 static std::string TypeInt16 = "int16";
@@ -40,7 +40,7 @@ class Scheme {
 public:
     void Push_Back(const SchemeNode& value);
     void Push_Back(SchemeNode&& value);
-    void AddAlias(const std::string& current_name , const std::string& alias);
+    void AddAlias(const std::string& current_name, const std::string& alias);
 
     const SchemeNode* GetData() const;
     const std::string& GetName(size_t index) const;
@@ -50,7 +50,8 @@ public:
 
     size_t Size() const;
     void Clear();
+
 private:
     std::vector<SchemeNode> columns_;
-    std::unordered_map<std::string , size_t> columns_id_;
+    std::unordered_map<std::string, size_t> columns_id_;
 };

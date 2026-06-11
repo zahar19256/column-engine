@@ -1,41 +1,40 @@
-#pragma once 
-#include <cstring>
-#include <string_view>
-#include <vector>
-#include <string>
-#include <memory>
-#include <memory.h>
+#pragma once
+#include "GermanString.h"
 #include <cstdint>
+#include <cstring>
 #include <functional>
+#include <memory.h>
+#include <memory>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include "GermanString.h"
+#include <vector>
 
 namespace Utility {
 
-using Element_view = std::variant<int64_t , std::string_view , double>;
-using ScalarValue = std::variant<int64_t , GermanStr , double , __int128_t>; // TODO добавить std::string или не надо пока хз
-using LiteralValue = std::variant<int64_t , std::string , double , __int128_t>;
+using Element_view = std::variant<int64_t, std::string_view, double>;
+using ScalarValue =
+    std::variant<int64_t, GermanStr, double, __int128_t>; // TODO добавить std::string или не надо пока хз
+using LiteralValue = std::variant<int64_t, std::string, double, __int128_t>;
 using GroupKey = std::vector<ScalarValue>;
 
 class StringArena {
 public:
-    StringArena(size_t block_size = (1 << 20)) : block_size_(block_size) {
-
-    }
+    StringArena(size_t block_size = (1 << 20)) : block_size_(block_size) {}
     StringArena(const StringArena&) = delete;
     StringArena& operator=(const StringArena&) = delete;
     StringArena(StringArena&&) noexcept = default;
     StringArena& operator=(StringArena&&) noexcept = default;
 
-    std::string_view Add(const char* start , size_t size) {
+    std::string_view Add(const char* start, size_t size) {
         if (size == 0) {
             return std::string_view(empty_string_ptr_, 0);
         }
         char* ptr = Allocate(size);
         memcpy(ptr, start, size);
-        return std::string_view(ptr , size);
+        return std::string_view(ptr, size);
     }
 
     std::string_view Add(std::string_view s) {
@@ -91,27 +90,32 @@ public:
     size_t operator()(const GroupKey& key) const {
         uint64_t hash = 0;
         for (const auto& value : key) {
-            AddElement(hash , value);
+            AddElement(hash, value);
         }
         return static_cast<size_t>(hash);
     }
 
 private:
-    static void AddElement(uint64_t& hash , const ScalarValue& value) { // TODO аккуратно тут копирование строк, потом надо будет привязать арену строк
-        std::visit([&hash](const auto& item) {
-            using T = std::decay_t<decltype(item)>;
-            if constexpr (std::is_same_v<T, int64_t>) {
-                size_t value_hash = std::hash<int64_t>{}(item);
-                Combine(hash , value_hash ^ hash_integer_state_);
-            } else if constexpr (std::is_same_v<T, GermanStr>) {
-                size_t value_hash = GermanStrHash{}(item);
-                Combine(hash , value_hash ^ hash_string_state_);
-            } else if constexpr (std::is_same_v<T, double>) {
-                Combine(hash , HashDouble(item) ^ hash_double_state_);
-            } else if constexpr (std::is_same_v<T, __int128_t>) {
-                Combine(hash , HashInt128(item) ^ hash_int128_state_);
-            }
-        }, value);
+    // LLM hash
+    static void AddElement(
+        uint64_t& hash,
+        const ScalarValue& value) { // TODO аккуратно тут копирование строк, потом надо будет привязать арену строк
+        std::visit(
+            [&hash](const auto& item) {
+                using T = std::decay_t<decltype(item)>;
+                if constexpr (std::is_same_v<T, int64_t>) {
+                    size_t value_hash = std::hash<int64_t>{}(item);
+                    Combine(hash, value_hash ^ hash_integer_state_);
+                } else if constexpr (std::is_same_v<T, GermanStr>) {
+                    size_t value_hash = GermanStrHash{}(item);
+                    Combine(hash, value_hash ^ hash_string_state_);
+                } else if constexpr (std::is_same_v<T, double>) {
+                    Combine(hash, HashDouble(item) ^ hash_double_state_);
+                } else if constexpr (std::is_same_v<T, __int128_t>) {
+                    Combine(hash, HashInt128(item) ^ hash_int128_state_);
+                }
+            },
+            value);
     }
     static inline uint64_t HashDouble(double x) {
         if (x == 0.0) {
@@ -125,16 +129,16 @@ private:
         uint64_t low = static_cast<uint64_t>(value);
         uint64_t high = static_cast<uint64_t>(value >> 64);
         uint64_t hash = std::hash<uint64_t>{}(low);
-        Combine(hash , std::hash<uint64_t>{}(high));
+        Combine(hash, std::hash<uint64_t>{}(high));
         return hash;
     }
-    static void Combine(uint64_t& prev_hash , uint64_t current_hash) {
+    static void Combine(uint64_t& prev_hash, uint64_t current_hash) {
         prev_hash ^= current_hash + 0x9e3779b97f4a7c15ULL + (prev_hash << 6) + (prev_hash >> 2);
     }
-    static constexpr uint64_t hash_string_state_  = 0x243f6a8885a308d3ULL;
+    static constexpr uint64_t hash_string_state_ = 0x243f6a8885a308d3ULL;
     static constexpr uint64_t hash_integer_state_ = 0x13198a2e03707344ULL;
-    static constexpr uint64_t hash_double_state_  = 0xa4093822299f31d0ULL;
-    static constexpr uint64_t hash_int128_state_  = 0x082efa98ec4e6c89ULL;
+    static constexpr uint64_t hash_double_state_ = 0xa4093822299f31d0ULL;
+    static constexpr uint64_t hash_int128_state_ = 0x082efa98ec4e6c89ULL;
 };
 
 } // namespace Utility

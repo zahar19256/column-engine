@@ -6,12 +6,12 @@
 #include <charconv>
 #include <cstddef>
 #include <cstring>
-#include <memory>
-#include <stdexcept>
 #include <filesystem>
 #include <iostream>
-#include <string>
 #include <memory.h>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 void BelZWriter::EnsureCapacity(size_t additional_size) {
     if (offset_ + additional_size > buf_.size()) {
@@ -27,20 +27,19 @@ void BelZWriter::EnsureCapacity(size_t additional_size) {
 }
 
 BelZWriter::BelZWriter(const std::string& CSVFilePath)
-    : BelZWriter(CSVFilePath , [] (const std::string& path) {
-        std::filesystem::path dest_path(path);
-        dest_path.replace_extension(".belZ");
-        return dest_path.string();
-    }(CSVFilePath)) {
-}
+    : BelZWriter(CSVFilePath, [](const std::string& path) {
+          std::filesystem::path dest_path(path);
+          dest_path.replace_extension(".belZ");
+          return dest_path.string();
+      }(CSVFilePath)) {}
 
-BelZWriter::BelZWriter(const std::string& CSVFilePath , const std::string& outputFilePath) {
+BelZWriter::BelZWriter(const std::string& CSVFilePath, const std::string& outputFilePath) {
     (void)CSVFilePath;
     std::filesystem::path dest_path(outputFilePath);
     if (dest_path.has_parent_path()) {
         std::filesystem::create_directories(dest_path.parent_path());
     }
-    fout_.open(dest_path , std::ios::binary | std::ios::out);
+    fout_.open(dest_path, std::ios::binary | std::ios::out);
     buf_.resize(STANDART_BUCKET_SIZE * 2);
     if (!fout_.is_open()) {
         throw std::runtime_error("Failed to create file: " + dest_path.string());
@@ -51,57 +50,57 @@ uint64_t BelZWriter::GetOffSet() {
     return static_cast<uint64_t>(fout_.tellp()) + offset_;
 }
 
-void BelZWriter::Append(const char* data , size_t size , ColumnType type) {
-    //std::cerr << "APPEND" << std::endl;
+void BelZWriter::Append(const char* data, size_t size, ColumnType type) {
+    // std::cerr << "APPEND" << std::endl;
     if (type == ColumnType::String) {
-        AppendString(data , size);
+        AppendString(data, size);
         return;
     }
     if (type == ColumnType::Int8) {
-        AppendNumber<int8_t>(data , size);
-        //std::cerr << "APINT " << buf_ << std::endl;
+        AppendNumber<int8_t>(data, size);
+        // std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
     if (type == ColumnType::Int16) {
-        AppendNumber<int16_t>(data , size);
-        //std::cerr << "APINT " << buf_ << std::endl;
+        AppendNumber<int16_t>(data, size);
+        // std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
     if (type == ColumnType::Int32) {
-        AppendNumber<int32_t>(data , size);
-        //std::cerr << "APINT " << buf_ << std::endl;
+        AppendNumber<int32_t>(data, size);
+        // std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
     if (type == ColumnType::Int64) {
-        AppendNumber<int64_t>(data , size);
-        //std::cerr << "APINT " << buf_ << std::endl;
+        AppendNumber<int64_t>(data, size);
+        // std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
     if (type == ColumnType::Double) {
-        AppendNumber<double>(data , size);
-        //std::cerr << "APINT " << buf_ << std::endl;
+        AppendNumber<double>(data, size);
+        // std::cerr << "APINT " << buf_ << std::endl;
         return;
     }
     throw std::runtime_error("Try to Write to BelZFormat unknown type: " + std::to_string(uint8_t(type)));
 }
 
-void BelZWriter::AppendColumn(std::shared_ptr<Column> column , ColumnType type) {
+void BelZWriter::AppendColumn(std::shared_ptr<Column> column, ColumnType type) {
     EncodedColumn result = GetBestCompression(column);
     size_t payload_size = result.data.size();
     EnsureCapacity(sizeof(result.codec) + sizeof(payload_size) + payload_size);
-    memcpy(buf_.data() + offset_ , &result.codec , sizeof(result.codec));
+    memcpy(buf_.data() + offset_, &result.codec, sizeof(result.codec));
     offset_ += sizeof(result.codec);
-    memcpy(buf_.data() + offset_ , &payload_size , sizeof(payload_size));
+    memcpy(buf_.data() + offset_, &payload_size, sizeof(payload_size));
     offset_ += sizeof(payload_size);
-    memcpy(buf_.data() + offset_ , result.data.data() , payload_size);
+    memcpy(buf_.data() + offset_, result.data.data(), payload_size);
     offset_ += payload_size;
 }
 
-inline void BelZWriter::AppendString(const char* data , size_t size) {
+inline void BelZWriter::AppendString(const char* data, size_t size) {
     EnsureCapacity(size + sizeof(size));
-    memcpy(buf_.data() + offset_ , reinterpret_cast<char*>(&size) , sizeof(size));
+    memcpy(buf_.data() + offset_, reinterpret_cast<char*>(&size), sizeof(size));
     offset_ += sizeof(size);
-    memcpy(buf_.data() + offset_ , data , size);
+    memcpy(buf_.data() + offset_, data, size);
     offset_ += size;
 }
 

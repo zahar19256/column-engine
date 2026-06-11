@@ -10,7 +10,7 @@
 void CSVConvertor::Reset() {
     chunk_.Clear();
     meta_.Clear();
-    //scheme_.Clear();
+    // scheme_.Clear();
 }
 
 void CSVConvertor::SetScheme(const Scheme& scheme) {
@@ -18,7 +18,7 @@ void CSVConvertor::SetScheme(const Scheme& scheme) {
 }
 
 void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
-    if (SchemeFilePath == "BENCHTIME.GO") { // TODO пока что это костыль для мини бенча к КТ 1 потом будет убрано 
+    if (SchemeFilePath == "BENCHTIME.GO") { // TODO пока что это костыль для мини бенча к КТ 1 потом будет убрано
         return;
     }
     CSVReader tmp_scan(SchemeFilePath);
@@ -27,7 +27,7 @@ void CSVConvertor::GetScheme(const std::string& SchemeFilePath) {
         if (row.Size() != 2) {
             throw std::runtime_error("Scheme table has more than two fields in one row!");
         }
-        scheme_.Push_Back(SchemeNode(row[0] , DatumConvertor(row[1])));
+        scheme_.Push_Back(SchemeNode(row[0], DatumConvertor(row[1])));
     }
 }
 
@@ -43,25 +43,26 @@ bool CSVConvertor::GetChunk(CSVReader& scan_) {
 void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath) {
     std::filesystem::path dest_path(CSVFilePath);
     dest_path.replace_extension(".belZ");
-    MakeBelZFormat(CSVFilePath , SchemeFilePath , dest_path.string());
+    MakeBelZFormat(CSVFilePath, SchemeFilePath, dest_path.string());
 }
 
-void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath, const std::string& outputFilePath) {
+void CSVConvertor::MakeBelZFormat(const std::string& CSVFilePath, const std::string& SchemeFilePath,
+                                  const std::string& outputFilePath) {
     Reset();
     CSVReader scan_(CSVFilePath);
     GetScheme(SchemeFilePath);
-    BelZWriter writer(CSVFilePath , outputFilePath);
+    BelZWriter writer(CSVFilePath, outputFilePath);
     size_t col_count = scheme_.Size();
-    chunk_.Init(scheme_ , true);
+    chunk_.Init(scheme_, true);
     meta_.SetScheme(std::move(scheme_));
     while (GetChunk(scan_)) {
         size_t rows_in_chunk = chunk_.GetRows();
-        //std::cerr << "!!!" << rows_in_chunk << ' ' << col_count << std::endl;
+        // std::cerr << "!!!" << rows_in_chunk << ' ' << col_count << std::endl;
         meta_.AddBatchOffset(writer.GetOffSet());
         meta_.AddRows(rows_in_chunk);
         for (size_t column_idx = 0; column_idx < col_count; ++column_idx) {
             meta_.AddColumnOffset(writer.GetOffSet());
-            writer.AppendColumn(chunk_.GetColumn(column_idx) , chunk_.GetType(column_idx));
+            writer.AppendColumn(chunk_.GetColumn(column_idx), chunk_.GetType(column_idx));
         }
         writer.Flush();
     }

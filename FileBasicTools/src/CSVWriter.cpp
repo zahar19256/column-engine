@@ -103,12 +103,9 @@ void CheckColumnSize(const std::shared_ptr<Column>& column, size_t rows) {
 } // namespace
 
 CSVWriter::CSVWriter(const std::string& filePath)
-    : CSVWriter(std::filesystem::path(filePath), PathMode::AddUpdSuffix) {
-}
+    : CSVWriter(std::filesystem::path(filePath), PathMode::AddUpdSuffix) {}
 
-CSVWriter::CSVWriter(const std::filesystem::path& filePath, PathMode mode)
-    : CSVWriter(filePath, mode, false) {
-}
+CSVWriter::CSVWriter(const std::filesystem::path& filePath, PathMode mode) : CSVWriter(filePath, mode, false) {}
 
 CSVWriter::CSVWriter(const std::filesystem::path& filePath, PathMode mode, bool write_header)
     : write_header_(write_header) {
@@ -183,12 +180,8 @@ void CSVWriter::WriteInt128(__int128_t data) {
 
 void CSVWriter::WriteDouble(double data) {
     std::array<char, 64> buffer{};
-    auto [ptr, err] = std::to_chars(
-        buffer.data(),
-        buffer.data() + buffer.size(),
-        data,
-        std::chars_format::general,
-        std::numeric_limits<double>::max_digits10);
+    auto [ptr, err] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), data, std::chars_format::general,
+                                    std::numeric_limits<double>::max_digits10);
     if (err != std::errc()) {
         throw std::runtime_error("Failed to format double!");
     }
@@ -238,38 +231,38 @@ void CSVWriter::WriteTimestamp(int64_t timestamp) {
 
 void CSVWriter::WriteValue(const std::shared_ptr<Column>& column, ColumnType type, size_t row) {
     switch (type) {
-        case ColumnType::Int8:
-            WriteInt64(static_cast<int64_t>(static_cast<const Int8Column*>(column.get())->At(row)));
-            return;
-        case ColumnType::Int16:
-            WriteInt64(static_cast<int64_t>(static_cast<const Int16Column*>(column.get())->At(row)));
-            return;
-        case ColumnType::Int32:
-            WriteInt64(static_cast<int64_t>(static_cast<const Int32Column*>(column.get())->At(row)));
-            return;
-        case ColumnType::Int64:
-            WriteInt64(static_cast<const Int64Column*>(column.get())->At(row));
-            return;
-        case ColumnType::Int128:
-            WriteInt128(static_cast<const Int128Column*>(column.get())->At(row));
-            return;
-        case ColumnType::Double:
-            WriteDouble(static_cast<const DoubleColumn*>(column.get())->At(row));
-            return;
-        case ColumnType::String:
-            WriteString(static_cast<const StringColumn*>(column.get())->At_view(row));
-            return;
-        case ColumnType::FlatString:
-            WriteString(static_cast<const FlatStringColumn*>(column.get())->At(row));
-            return;
-        case ColumnType::Date:
-            WriteDate(static_cast<const DateColumn*>(column.get())->At(row));
-            return;
-        case ColumnType::Timestamp:
-            WriteTimestamp(static_cast<const TimeStampColumn*>(column.get())->At(row));
-            return;
-        case ColumnType::Unknown:
-            break;
+    case ColumnType::Int8:
+        WriteInt64(static_cast<int64_t>(static_cast<const Int8Column*>(column.get())->At(row)));
+        return;
+    case ColumnType::Int16:
+        WriteInt64(static_cast<int64_t>(static_cast<const Int16Column*>(column.get())->At(row)));
+        return;
+    case ColumnType::Int32:
+        WriteInt64(static_cast<int64_t>(static_cast<const Int32Column*>(column.get())->At(row)));
+        return;
+    case ColumnType::Int64:
+        WriteInt64(static_cast<const Int64Column*>(column.get())->At(row));
+        return;
+    case ColumnType::Int128:
+        WriteInt128(static_cast<const Int128Column*>(column.get())->At(row));
+        return;
+    case ColumnType::Double:
+        WriteDouble(static_cast<const DoubleColumn*>(column.get())->At(row));
+        return;
+    case ColumnType::String:
+        WriteString(static_cast<const StringColumn*>(column.get())->At_view(row));
+        return;
+    case ColumnType::FlatString:
+        WriteString(static_cast<const FlatStringColumn*>(column.get())->At(row));
+        return;
+    case ColumnType::Date:
+        WriteDate(static_cast<const DateColumn*>(column.get())->At(row));
+        return;
+    case ColumnType::Timestamp:
+        WriteTimestamp(static_cast<const TimeStampColumn*>(column.get())->At(row));
+        return;
+    case ColumnType::Unknown:
+        break;
     }
     throw std::runtime_error("Unknown column type in CSVWriter!");
 }

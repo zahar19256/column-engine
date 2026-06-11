@@ -1,17 +1,16 @@
-#include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include <vector>
 #include "CSVReader.h"
 #include "Row.h"
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
 class TempCSVFile {
 public:
-    TempCSVFile(const std::string& filename, const std::string& content) 
-        : path_(fs::current_path() / filename) {
+    TempCSVFile(const std::string& filename, const std::string& content) : path_(fs::current_path() / filename) {
         std::ofstream out(path_);
         out << content;
         out.close();
@@ -39,9 +38,9 @@ TEST(CSVReaderTest, ReadSingleRow) {
 
     StringBacket row;
     size_t bytesRead = 0;
-    
+
     reader.ReadRowCSV(row, bytesRead);
-    
+
     EXPECT_EQ(row.Size(), 3);
     EXPECT_EQ(row[0], "col1");
     EXPECT_EQ(row[2], "col3");
@@ -49,10 +48,9 @@ TEST(CSVReaderTest, ReadSingleRow) {
 }
 
 TEST(CSVReaderTest, ReadFullTable) {
-    std::string content = 
-        "name,age\n"
-        "Alice,25\n"
-        "Bob,30\n";
+    std::string content = "name,age\n"
+                          "Alice,25\n"
+                          "Bob,30\n";
     TempCSVFile tempFile("test_full.csv", content);
 
     CSVReader reader(tempFile.GetPath());
@@ -81,19 +79,19 @@ TEST(CSVReaderTest, ReadChunk_SmallBucket) {
     std::string content = "1,2\n3,4\n5,6\n";
     TempCSVFile tempFile("test_chunk.csv", content);
 
-    size_t small_bucket_size = 1; 
+    size_t small_bucket_size = 1;
     CSVReader reader(tempFile.GetPath(), small_bucket_size);
 
     std::vector<StringBacket> chunk1;
     reader.ReadChunk(chunk1);
     ASSERT_FALSE(chunk1.empty());
     EXPECT_EQ(chunk1[0][0], "1");
-    
+
     std::vector<StringBacket> chunk2;
     reader.ReadChunk(chunk2);
     ASSERT_FALSE(chunk2.empty());
     EXPECT_EQ(chunk2[0][0], "3");
-    
+
     std::vector<StringBacket> chunk3;
     reader.ReadChunk(chunk3);
     ASSERT_FALSE(chunk3.empty());
@@ -105,9 +103,9 @@ TEST(CSVReaderTest, BOM_Handling) {
     TempCSVFile tempFile("test_bom.csv", content);
 
     CSVReader reader(tempFile.GetPath());
-    
-    reader.BOMHelper(); 
-    
+
+    reader.BOMHelper();
+
     StringBacket row;
     size_t bytes = 0;
     reader.ReadRowCSV(row, bytes);
@@ -129,9 +127,8 @@ TEST(CSVReaderTest, LargeFile_MultipleBuckets) {
     int expected_rows = 0;
 
     while (ss.str().size() < target_size) {
-        ss << expected_rows << "," 
-           << "payload_data_to_fill_space_for_testing_buckets_" << expected_rows 
-           << "\n";
+        ss << expected_rows << ","
+           << "payload_data_to_fill_space_for_testing_buckets_" << expected_rows << "\n";
         expected_rows++;
     }
 
@@ -158,15 +155,15 @@ TEST(CSVReaderTest, Escaping_DelimiterInQuotes) {
     std::string content = R"(id,desc,val
 1,"comma, separated, value",100
 2,normal,200)";
-    
+
     TempCSVFile tempFile("test_delim_esc.csv", content);
     CSVReader reader(tempFile.GetPath());
-    
+
     auto table = reader.ReadFullTable();
 
-    ASSERT_EQ(table.size(), 3); 
+    ASSERT_EQ(table.size(), 3);
 
-    EXPECT_EQ(table[1][1], "comma, separated, value"); 
+    EXPECT_EQ(table[1][1], "comma, separated, value");
     EXPECT_EQ(table[1][2], "100");
 }
 
@@ -187,7 +184,7 @@ TEST(CSVReaderTest, Escaping_QuotesInQuotes) {
 TEST(CSVReaderTest, Escaping_NewlineInQuotes) {
     std::string content = "id,text,status\n"
                           "1,\"Line one\nLine two\",Done";
-    
+
     TempCSVFile tempFile("test_newline_esc.csv", content);
     CSVReader reader(tempFile.GetPath());
 
@@ -209,17 +206,17 @@ TEST(CSVReaderTest, Escaping_Complex) {
     CSVReader reader(tempFile.GetPath());
 
     auto table = reader.ReadFullTable();
-    
+
     ASSERT_EQ(table.size(), 3);
 
     EXPECT_EQ(table[1][0], "");
-    EXPECT_EQ(table[1][1], ""); 
+    EXPECT_EQ(table[1][1], "");
 
     EXPECT_EQ(table[2][0], "starts with, comma");
     EXPECT_EQ(table[2][1], ",ends with comma");
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

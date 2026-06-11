@@ -3,31 +3,31 @@
 
 ColumnType DatumConvertor(const std::string& type) {
     if (type == TypeString) {
-        return  ColumnType::String;
+        return ColumnType::String;
     }
     if (type == TypeInt64) {
-        return  ColumnType::Int64;
+        return ColumnType::Int64;
     }
     if (type == TypeInt128) {
-        return  ColumnType::Int128;
+        return ColumnType::Int128;
     }
     if (type == TypeInt32) {
-        return  ColumnType::Int32;
+        return ColumnType::Int32;
     }
     if (type == TypeInt16) {
-        return  ColumnType::Int16;
+        return ColumnType::Int16;
     }
     if (type == TypeInt8) {
-        return  ColumnType::Int8;
+        return ColumnType::Int8;
     }
     if (type == TypeDate) {
-        return  ColumnType::Date;
+        return ColumnType::Date;
     }
     if (type == TypeTimestamp) {
-        return  ColumnType::Timestamp;
+        return ColumnType::Timestamp;
     }
     if (type == TypeDouble) {
-        return  ColumnType::Double;
+        return ColumnType::Double;
     }
     return ColumnType::Unknown;
 }
@@ -42,14 +42,13 @@ void Scheme::Push_Back(SchemeNode&& value) {
     columns_.push_back(std::move(value));
 }
 
-void Scheme::AddAlias(const std::string& current_name , const std::string& alias) {
+void Scheme::AddAlias(const std::string& current_name, const std::string& alias) {
     columns_id_[alias] = columns_id_[current_name];
 }
 
 const SchemeNode* Scheme::GetData() const {
     return columns_.data();
 }
-
 
 const std::string& Scheme::GetName(size_t index) const {
     if (index >= columns_.size()) {

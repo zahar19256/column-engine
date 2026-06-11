@@ -1,13 +1,13 @@
-#include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include <vector>
-#include <cstdint>
 #include "BelZWriter.h"
 #include "MetaData.h"
 #include "Scheme.h"
+#include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -17,20 +17,23 @@ protected:
     std::string belzPath = "test_data.belZ";
 
     void SetUp() override {
-        if (fs::exists(belzPath)) fs::remove(belzPath);
+        if (fs::exists(belzPath))
+            fs::remove(belzPath);
         std::ofstream(csvPath).close();
     }
 
     void TearDown() override {
-        if (fs::exists(belzPath)) fs::remove(belzPath);
-        if (fs::exists(csvPath)) fs::remove(csvPath);
+        if (fs::exists(belzPath))
+            fs::remove(belzPath);
+        if (fs::exists(csvPath))
+            fs::remove(csvPath);
     }
 
     std::vector<uint8_t> ReadBinaryFile(const std::string& path) {
         std::ifstream input(path, std::ios::binary);
-        if (!input.is_open()) return {};
-        return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)),
-                                     std::istreambuf_iterator<char>());
+        if (!input.is_open())
+            return {};
+        return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     }
 };
 
@@ -38,26 +41,26 @@ TEST_F(BelZWriterTest, FileCreationAndNaming) {
     {
         BelZWriter writer(csvPath);
     }
-    
+
     EXPECT_TRUE(fs::exists(belzPath));
 }
 
 TEST_F(BelZWriterTest, OffsetTracking) {
     BelZWriter writer(csvPath);
-    
+
     EXPECT_EQ(writer.GetOffSet(), 0);
 
-    writer.Append(std::string("10").data() , 2 , ColumnType::Int64);
+    writer.Append(std::string("10").data(), 2, ColumnType::Int64);
     EXPECT_EQ(writer.GetOffSet(), 8);
 
-    writer.Append(std::string("20").data() , 2 , ColumnType::Int64);
+    writer.Append(std::string("20").data(), 2, ColumnType::Int64);
     EXPECT_EQ(writer.GetOffSet(), 16);
 }
 
 TEST_F(BelZWriterTest, WriteInt64) {
     {
         BelZWriter writer(csvPath);
-        writer.Append(std::string("1234567890123").data() , 13 , ColumnType::Int64);
+        writer.Append(std::string("1234567890123").data(), 13, ColumnType::Int64);
         writer.Flush();
     }
 
@@ -66,14 +69,14 @@ TEST_F(BelZWriterTest, WriteInt64) {
 
     int64_t val = 0;
     std::memcpy(&val, data.data(), sizeof(int64_t));
-    
+
     EXPECT_EQ(val, 1234567890123);
 }
 
 TEST_F(BelZWriterTest, WriteInt64_Negative) {
     {
         BelZWriter writer(csvPath);
-        writer.Append(std::string("-500").data() , 4 , ColumnType::Int64);
+        writer.Append(std::string("-500").data(), 4, ColumnType::Int64);
         writer.Flush();
     }
 
@@ -91,7 +94,7 @@ TEST_F(BelZWriterTest, WriteString_WithLengthPrefix) {
 
     {
         BelZWriter writer(csvPath);
-        writer.Append(testStr.data() , testStr.size() , ColumnType::String);
+        writer.Append(testStr.data(), testStr.size(), ColumnType::String);
 
         EXPECT_EQ(writer.GetOffSet(), sizeof(size_t) + expectedLen);
         writer.Flush();
@@ -142,16 +145,16 @@ TEST_F(BelZWriterTest, WriteMeta_Integration) {
     meta.AddRows(200);
     meta.AddColumnOffset(0);
     meta.AddColumnOffset(1024);
-    
+
     Scheme scheme;
     scheme.Push_Back({"col1", ColumnType::Int64});
     meta.SetScheme(std::move(scheme));
 
     {
         BelZWriter writer(csvPath);
-        writer.Append(std::string("0").data() , 1 , ColumnType::Int64);
+        writer.Append(std::string("0").data(), 1, ColumnType::Int64);
         writer.WriteMeta(meta);
-        
+
         EXPECT_GT(writer.GetOffSet(), 8);
     }
 

@@ -36,7 +36,7 @@ size_t MetaData::GetBatchOffset(size_t index) const {
     return batch_offsets_[index];
 }
 
-size_t MetaData::GetColumnOffset(size_t batch_index , size_t index) const {
+size_t MetaData::GetColumnOffset(size_t batch_index, size_t index) const {
     if (batch_index >= batch_offsets_.size()) {
         throw std::runtime_error("Batch index is out of range, can't take Column offset!");
     }

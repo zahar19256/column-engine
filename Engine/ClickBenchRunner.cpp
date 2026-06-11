@@ -31,20 +31,13 @@ int RunBuild(const std::filesystem::path& build_dir) {
         throw std::runtime_error("fork failed before auto rebuild: " + std::string(strerror(errno)));
     }
     if (pid == 0) {
-        execlp(
-            "cmake" ,
-            "cmake" ,
-            "--build" ,
-            build_dir_string.c_str() ,
-            "--target" ,
-            "clickbench_runner" ,
-            nullptr);
+        execlp("cmake", "cmake", "--build", build_dir_string.c_str(), "--target", "clickbench_runner", nullptr);
         std::cerr << "execlp(cmake) failed: " << strerror(errno) << '\n';
         _exit(127);
     }
 
     int status = 0;
-    if (waitpid(pid , &status , 0) < 0) {
+    if (waitpid(pid, &status, 0) < 0) {
         throw std::runtime_error("waitpid failed during auto rebuild: " + std::string(strerror(errno)));
     }
     if (WIFEXITED(status)) {
@@ -56,7 +49,7 @@ int RunBuild(const std::filesystem::path& build_dir) {
     return 1;
 }
 
-void AutoRebuildAndReexec(int argc , char* argv[]) {
+void AutoRebuildAndReexec(int argc, char* argv[]) {
     if (getenv(kAutoRebuiltEnv) != nullptr || getenv(kSkipAutoRebuildEnv) != nullptr) {
         return;
     }
@@ -70,8 +63,8 @@ void AutoRebuildAndReexec(int argc , char* argv[]) {
         throw std::runtime_error("clickbench_runner auto rebuild failed with code " + std::to_string(build_status));
     }
 
-    setenv(kAutoRebuiltEnv , "1" , 1);
-    execv(executable.c_str() , argv);
+    setenv(kAutoRebuiltEnv, "1", 1);
+    execv(executable.c_str(), argv);
     throw std::runtime_error("execv failed after auto rebuild: " + std::string(strerror(errno)));
 }
 
@@ -116,7 +109,7 @@ std::string Int128ToString(__int128_t value) {
     if (negative) {
         result.push_back('-');
     }
-    std::reverse(result.begin() , result.end());
+    std::reverse(result.begin(), result.end());
     return result;
 }
 
@@ -133,9 +126,7 @@ std::string DateToString(int64_t days) {
     year += month <= 2;
 
     std::ostringstream out;
-    out << std::setfill('0') << std::setw(4) << year << '-'
-        << std::setw(2) << month << '-'
-        << std::setw(2) << day;
+    out << std::setfill('0') << std::setw(4) << year << '-' << std::setw(2) << month << '-' << std::setw(2) << day;
     return out.str();
 }
 
@@ -153,14 +144,12 @@ std::string TimestampToString(int64_t timestamp) {
     seconds %= 60;
 
     std::ostringstream out;
-    out << DateToString(days) << ' '
-        << std::setfill('0') << std::setw(2) << hours << ':'
-        << std::setw(2) << minutes << ':'
-        << std::setw(2) << seconds;
+    out << DateToString(days) << ' ' << std::setfill('0') << std::setw(2) << hours << ':' << std::setw(2) << minutes
+        << ':' << std::setw(2) << seconds;
     return out.str();
 }
 
-void WriteEscaped(std::ofstream& out , std::string_view value) {
+void WriteEscaped(std::ofstream& out, std::string_view value) {
     bool needs_quotes = false;
     for (const char item : value) {
         if (item == ',' || item == '\n' || item == '\r' || item == '"') {
@@ -185,37 +174,37 @@ void WriteEscaped(std::ofstream& out , std::string_view value) {
     out << '"';
 }
 
-void WriteValue(std::ofstream& out , const std::shared_ptr<Column>& column , size_t row) {
-    switch(column->GetType()) {
-        case ColumnType::Int8:
-            out << static_cast<int64_t>(As<Int8Column>(column)->At(row));
-            return;
-        case ColumnType::Int16:
-            out << As<Int16Column>(column)->At(row);
-            return;
-        case ColumnType::Int32:
-            out << As<Int32Column>(column)->At(row);
-            return;
-        case ColumnType::Int64:
-            out << As<Int64Column>(column)->At(row);
-            return;
-        case ColumnType::Int128:
-            out << Int128ToString(As<Int128Column>(column)->At(row));
-            return;
-        case ColumnType::Double:
-            out << std::setprecision(17) << As<DoubleColumn>(column)->At(row);
-            return;
-        case ColumnType::String:
-            WriteEscaped(out , As<StringColumn>(column)->At_view(row));
-            return;
-        case ColumnType::Date:
-            out << DateToString(As<DateColumn>(column)->At(row));
-            return;
-        case ColumnType::Timestamp:
-            out << TimestampToString(As<TimeStampColumn>(column)->At(row));
-            return;
-        case ColumnType::Unknown:
-            break;
+void WriteValue(std::ofstream& out, const std::shared_ptr<Column>& column, size_t row) {
+    switch (column->GetType()) {
+    case ColumnType::Int8:
+        out << static_cast<int64_t>(As<Int8Column>(column)->At(row));
+        return;
+    case ColumnType::Int16:
+        out << As<Int16Column>(column)->At(row);
+        return;
+    case ColumnType::Int32:
+        out << As<Int32Column>(column)->At(row);
+        return;
+    case ColumnType::Int64:
+        out << As<Int64Column>(column)->At(row);
+        return;
+    case ColumnType::Int128:
+        out << Int128ToString(As<Int128Column>(column)->At(row));
+        return;
+    case ColumnType::Double:
+        out << std::setprecision(17) << As<DoubleColumn>(column)->At(row);
+        return;
+    case ColumnType::String:
+        WriteEscaped(out, As<StringColumn>(column)->At_view(row));
+        return;
+    case ColumnType::Date:
+        out << DateToString(As<DateColumn>(column)->At(row));
+        return;
+    case ColumnType::Timestamp:
+        out << TimestampToString(As<TimeStampColumn>(column)->At(row));
+        return;
+    case ColumnType::Unknown:
+        break;
     }
     throw std::runtime_error("Unknown type in clickbench csv writer!");
 }
@@ -223,7 +212,7 @@ void WriteValue(std::ofstream& out , const std::shared_ptr<Column>& column , siz
 class BatchCsvWriter {
 public:
     explicit BatchCsvWriter(const std::filesystem::path& path) {
-        out_.open(path , std::ios::out);
+        out_.open(path, std::ios::out);
         if (!out_.is_open()) {
             throw std::runtime_error("Can't open csv file: " + path.string());
         }
@@ -245,7 +234,7 @@ public:
                 if (column != 0) {
                     out_ << ',';
                 }
-                WriteValue(out_ , batch.GetColumn(column) , row);
+                WriteValue(out_, batch.GetColumn(column), row);
             }
             out_ << '\n';
             ++rows_;
@@ -262,7 +251,7 @@ private:
             if (column != 0) {
                 out_ << ',';
             }
-            WriteEscaped(out_ , batch.GetScheme().GetName(column));
+            WriteEscaped(out_, batch.GetScheme().GetName(column));
         }
         if (batch.Size() != 0) {
             out_ << '\n';
@@ -274,9 +263,9 @@ private:
     size_t rows_ = 0;
 };
 
-Batch MakeInt64Result(const std::string& name , int64_t value) {
+Batch MakeInt64Result(const std::string& name, int64_t value) {
     Scheme scheme;
-    scheme.Push_Back(SchemeNode{name , ColumnType::Int64});
+    scheme.Push_Back(SchemeNode{name, ColumnType::Int64});
 
     auto column = std::make_shared<Int64Column>();
     column->Push_Back(value);
@@ -290,9 +279,9 @@ Batch MakeInt64Result(const std::string& name , int64_t value) {
 
 Batch MakeQuery3Result(const ClickBench::Query3Result& value) {
     Scheme scheme;
-    scheme.Push_Back(SchemeNode{ClickBench::kQuery3SumAdvEngineIdColumn , ColumnType::Int64});
-    scheme.Push_Back(SchemeNode{ClickBench::kQuery3CountColumn , ColumnType::Int64});
-    scheme.Push_Back(SchemeNode{ClickBench::kQuery3AvgResolutionWidthColumn , ColumnType::Int16});
+    scheme.Push_Back(SchemeNode{ClickBench::kQuery3SumAdvEngineIdColumn, ColumnType::Int64});
+    scheme.Push_Back(SchemeNode{ClickBench::kQuery3CountColumn, ColumnType::Int64});
+    scheme.Push_Back(SchemeNode{ClickBench::kQuery3AvgResolutionWidthColumn, ColumnType::Int16});
 
     auto sum_adv_engine_id = std::make_shared<Int64Column>();
     sum_adv_engine_id->Push_Back(value.sum_adv_engine_id);
@@ -314,8 +303,8 @@ Batch MakeQuery3Result(const ClickBench::Query3Result& value) {
 
 Batch MakeQuery7Result(const ClickBench::Query7Result& value) {
     Scheme scheme;
-    scheme.Push_Back(SchemeNode{ClickBench::kQuery7MinEventDateColumn , ColumnType::Date});
-    scheme.Push_Back(SchemeNode{ClickBench::kQuery7MaxEventDateColumn , ColumnType::Date});
+    scheme.Push_Back(SchemeNode{ClickBench::kQuery7MinEventDateColumn, ColumnType::Date});
+    scheme.Push_Back(SchemeNode{ClickBench::kQuery7MaxEventDateColumn, ColumnType::Date});
 
     auto min_event_date = std::make_shared<DateColumn>();
     min_event_date->Push_Back(value.min_event_date);
@@ -338,7 +327,7 @@ struct BenchRun {
     double write_ms = 0.0;
 };
 
-BenchRun WriteBatchResult(Batch output , const std::filesystem::path& file , double query_ms) {
+BenchRun WriteBatchResult(Batch output, const std::filesystem::path& file, double query_ms) {
     const auto start = std::chrono::steady_clock::now();
     BatchCsvWriter writer(file);
     writer.WriteBatch(output);
@@ -346,19 +335,18 @@ BenchRun WriteBatchResult(Batch output , const std::filesystem::path& file , dou
     return BenchRun{
         .rows = writer.Rows(),
         .query_ms = query_ms,
-        .write_ms = std::chrono::duration<double , std::milli>(finish - start).count(),
+        .write_ms = std::chrono::duration<double, std::milli>(finish - start).count(),
     };
 }
 
-template <typename Func>
-BenchRun RunBatchQuery(Func func , const std::filesystem::path& file) {
+template <typename Func> BenchRun RunBatchQuery(Func func, const std::filesystem::path& file) {
     const auto start = std::chrono::steady_clock::now();
     Batch output = func();
     const auto finish = std::chrono::steady_clock::now();
-    return WriteBatchResult(std::move(output) , file , std::chrono::duration<double , std::milli>(finish - start).count());
+    return WriteBatchResult(std::move(output), file, std::chrono::duration<double, std::milli>(finish - start).count());
 }
 
-BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query , const std::filesystem::path& file) {
+BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query, const std::filesystem::path& file) {
     auto executor = ClickBench::BuildExecutor(*query);
     BatchCsvWriter writer(file);
     Batch output;
@@ -367,7 +355,7 @@ BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query , const std::file
         const auto query_start = std::chrono::steady_clock::now();
         const bool has_data = executor->Next(output);
         const auto query_finish = std::chrono::steady_clock::now();
-        result.query_ms += std::chrono::duration<double , std::milli>(query_finish - query_start).count();
+        result.query_ms += std::chrono::duration<double, std::milli>(query_finish - query_start).count();
         if (!has_data) {
             break;
         }
@@ -375,7 +363,7 @@ BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query , const std::file
         const auto write_start = std::chrono::steady_clock::now();
         writer.WriteBatch(output);
         const auto write_finish = std::chrono::steady_clock::now();
-        result.write_ms += std::chrono::duration<double , std::milli>(write_finish - write_start).count();
+        result.write_ms += std::chrono::duration<double, std::milli>(write_finish - write_start).count();
     }
     result.rows = writer.Rows();
     result.read_ms = executor->ReadMillis();
@@ -384,7 +372,7 @@ BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query , const std::file
 
 struct BenchQuery {
     size_t number;
-    std::function<BenchRun(const std::string& , const std::filesystem::path&)> run;
+    std::function<BenchRun(const std::string&, const std::filesystem::path&)> run;
 };
 
 struct QueryPlanInfo {
@@ -394,47 +382,27 @@ struct QueryPlanInfo {
 
 std::vector<QueryPlanInfo> MakePlanInfos(const std::set<size_t>& only_queries) {
     std::vector<QueryPlanInfo> result = {
-        {2 , ClickBench::MakeSecondQueryPlan},
-        {3 , ClickBench::MakeThirdQueryPlan},
-        {4 , ClickBench::MakeFourthQueryPlan},
-        {5 , ClickBench::MakeFifthQueryPlan},
-        {6 , ClickBench::MakeSixthQueryPlan},
-        {7 , ClickBench::MakeSeventhQueryPlan},
-        {8 , ClickBench::MakeEighthQueryPlan},
-        {9 , ClickBench::MakeNinthQueryPlan},
-        {10 , ClickBench::MakeTenthQueryPlan},
-        {11 , ClickBench::MakeEleventhQueryPlan},
-        {12 , ClickBench::MakeTwelfthQueryPlan},
-        {13 , ClickBench::MakeThirteenthQueryPlan},
-        {14 , ClickBench::MakeFourteenthQueryPlan},
-        {15 , ClickBench::MakeFifteenthQueryPlan},
-        {16 , ClickBench::MakeSixteenthQueryPlan},
-        {17 , ClickBench::MakeSeventeenthQueryPlan},
-        {18 , ClickBench::MakeEighteenthQueryPlan},
-        {19 , ClickBench::MakeNineteenthQueryPlan},
-        {20 , ClickBench::MakeTwentiethQueryPlan},
-        {21 , ClickBench::MakeTwentyFirstQueryPlan},
-        {22 , ClickBench::MakeTwentySecondQueryPlan},
-        {23 , ClickBench::MakeTwentyThirdQueryPlan},
-        {24 , ClickBench::MakeTwentyFourthQueryPlan},
-        {25 , ClickBench::MakeTwentyFifthQueryPlan},
-        {26 , ClickBench::MakeTwentySixthQueryPlan},
-        {27 , ClickBench::MakeTwentySeventhQueryPlan},
-        {28 , ClickBench::MakeTwentyEighthQueryPlan},
-        {29 , ClickBench::MakeTwentyNinthQueryPlan},
-        {31 , ClickBench::MakeThirtyFirstQueryPlan},
-        {32 , ClickBench::MakeThirtySecondQueryPlan},
-        {33 , ClickBench::MakeThirtyThirdQueryPlan},
-        {34 , ClickBench::MakeThirtyFourthQueryPlan},
-        {35 , ClickBench::MakeThirtyFifthQueryPlan},
-        {36 , ClickBench::MakeThirtySixthQueryPlan},
-        {37 , ClickBench::MakeThirtySeventhQueryPlan},
-        {38 , ClickBench::MakeThirtyEighthQueryPlan},
-        {39 , ClickBench::MakeThirtyNinthQueryPlan},
-        {40 , ClickBench::MakeFortiethQueryPlan},
-        {41 , ClickBench::MakeFortyFirstQueryPlan},
-        {42 , ClickBench::MakeFortySecondQueryPlan},
-        {43 , ClickBench::MakeFortyThirdQueryPlan},
+        {2, ClickBench::MakeSecondQueryPlan},         {3, ClickBench::MakeThirdQueryPlan},
+        {4, ClickBench::MakeFourthQueryPlan},         {5, ClickBench::MakeFifthQueryPlan},
+        {6, ClickBench::MakeSixthQueryPlan},          {7, ClickBench::MakeSeventhQueryPlan},
+        {8, ClickBench::MakeEighthQueryPlan},         {9, ClickBench::MakeNinthQueryPlan},
+        {10, ClickBench::MakeTenthQueryPlan},         {11, ClickBench::MakeEleventhQueryPlan},
+        {12, ClickBench::MakeTwelfthQueryPlan},       {13, ClickBench::MakeThirteenthQueryPlan},
+        {14, ClickBench::MakeFourteenthQueryPlan},    {15, ClickBench::MakeFifteenthQueryPlan},
+        {16, ClickBench::MakeSixteenthQueryPlan},     {17, ClickBench::MakeSeventeenthQueryPlan},
+        {18, ClickBench::MakeEighteenthQueryPlan},    {19, ClickBench::MakeNineteenthQueryPlan},
+        {20, ClickBench::MakeTwentiethQueryPlan},     {21, ClickBench::MakeTwentyFirstQueryPlan},
+        {22, ClickBench::MakeTwentySecondQueryPlan},  {23, ClickBench::MakeTwentyThirdQueryPlan},
+        {24, ClickBench::MakeTwentyFourthQueryPlan},  {25, ClickBench::MakeTwentyFifthQueryPlan},
+        {26, ClickBench::MakeTwentySixthQueryPlan},   {27, ClickBench::MakeTwentySeventhQueryPlan},
+        {28, ClickBench::MakeTwentyEighthQueryPlan},  {29, ClickBench::MakeTwentyNinthQueryPlan},
+        {31, ClickBench::MakeThirtyFirstQueryPlan},   {32, ClickBench::MakeThirtySecondQueryPlan},
+        {33, ClickBench::MakeThirtyThirdQueryPlan},   {34, ClickBench::MakeThirtyFourthQueryPlan},
+        {35, ClickBench::MakeThirtyFifthQueryPlan},   {36, ClickBench::MakeThirtySixthQueryPlan},
+        {37, ClickBench::MakeThirtySeventhQueryPlan}, {38, ClickBench::MakeThirtyEighthQueryPlan},
+        {39, ClickBench::MakeThirtyNinthQueryPlan},   {40, ClickBench::MakeFortiethQueryPlan},
+        {41, ClickBench::MakeFortyFirstQueryPlan},    {42, ClickBench::MakeFortySecondQueryPlan},
+        {43, ClickBench::MakeFortyThirdQueryPlan},
     };
 
     if (only_queries.empty()) {
@@ -452,81 +420,183 @@ std::vector<QueryPlanInfo> MakePlanInfos(const std::set<size_t>& only_queries) {
 
 std::vector<BenchQuery> MakeQueries(const std::set<size_t>& only_queries) {
     std::vector<BenchQuery> result = {
-        {1 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeInt64Result(ClickBench::kQuery1ResultColumn , ClickBench::RunFirstQueryCount(table_name));
-            } , file);
-        }},
-        {2 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeInt64Result(ClickBench::kQuery2ResultColumn , ClickBench::RunSecondQueryCount(table_name));
-            } , file);
-        }},
-        {3 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeQuery3Result(ClickBench::RunThirdQuery(table_name));
-            } , file);
-        }},
-        {4 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeInt64Result(ClickBench::kQuery4ResultColumn , ClickBench::RunFourthQueryAvgUserID(table_name));
-            } , file);
-        }},
-        {5 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeInt64Result(ClickBench::kQuery5ResultColumn , ClickBench::RunFifthQueryDistinctUserID(table_name));
-            } , file);
-        }},
-        {6 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeInt64Result(ClickBench::kQuery6ResultColumn , ClickBench::RunSixthQueryDistinctSearchPhrase(table_name));
-            } , file);
-        }},
-        {7 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return MakeQuery7Result(ClickBench::RunSeventhQueryEventDateMinMax(table_name));
-            } , file);
-        }},
-        {8 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeEighthQueryPlan(table_name) , file); }},
-        {9 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeNinthQueryPlan(table_name) , file); }},
-        {10 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTenthQueryPlan(table_name) , file); }},
-        {11 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeEleventhQueryPlan(table_name) , file); }},
-        {12 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwelfthQueryPlan(table_name) , file); }},
-        {13 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirteenthQueryPlan(table_name) , file); }},
-        {14 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFourteenthQueryPlan(table_name) , file); }},
-        {15 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFifteenthQueryPlan(table_name) , file); }},
-        {16 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeSixteenthQueryPlan(table_name) , file); }},
-        {17 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeSeventeenthQueryPlan(table_name) , file); }},
-        {18 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeEighteenthQueryPlan(table_name) , file); }},
-        {19 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeNineteenthQueryPlan(table_name) , file); }},
-        {20 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentiethQueryPlan(table_name) , file); }},
-        {21 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyFirstQueryPlan(table_name) , file); }},
-        {22 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentySecondQueryPlan(table_name) , file); }},
-        {23 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyThirdQueryPlan(table_name) , file); }},
-        {24 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyFourthQueryPlan(table_name) , file); }},
-        {25 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyFifthQueryPlan(table_name) , file); }},
-        {26 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentySixthQueryPlan(table_name) , file); }},
-        {27 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentySeventhQueryPlan(table_name) , file); }},
-        {28 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyEighthQueryPlan(table_name) , file); }},
-        {29 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeTwentyNinthQueryPlan(table_name) , file); }},
-        {30 , [](const std::string& table_name , const std::filesystem::path& file) {
-            return RunBatchQuery([&]() {
-                return ClickBench::RunThirtiethQuery(table_name);
-            } , file);
-        }},
-        {31 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyFirstQueryPlan(table_name) , file); }},
-        {32 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtySecondQueryPlan(table_name) , file); }},
-        {33 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyThirdQueryPlan(table_name) , file); }},
-        {34 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyFourthQueryPlan(table_name) , file); }},
-        {35 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyFifthQueryPlan(table_name) , file); }},
-        {36 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtySixthQueryPlan(table_name) , file); }},
-        {37 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtySeventhQueryPlan(table_name) , file); }},
-        {38 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyEighthQueryPlan(table_name) , file); }},
-        {39 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeThirtyNinthQueryPlan(table_name) , file); }},
-        {40 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortiethQueryPlan(table_name) , file); }},
-        {41 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortyFirstQueryPlan(table_name) , file); }},
-        {42 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortySecondQueryPlan(table_name) , file); }},
-        {43 , [](const std::string& table_name , const std::filesystem::path& file) { return RunPlan(ClickBench::MakeFortyThirdQueryPlan(table_name) , file); }},
+        {1,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() {
+                     return MakeInt64Result(ClickBench::kQuery1ResultColumn,
+                                            ClickBench::RunFirstQueryCount(table_name));
+                 },
+                 file);
+         }},
+        {2,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() {
+                     return MakeInt64Result(ClickBench::kQuery2ResultColumn,
+                                            ClickBench::RunSecondQueryCount(table_name));
+                 },
+                 file);
+         }},
+        {3,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery([&]() { return MakeQuery3Result(ClickBench::RunThirdQuery(table_name)); }, file);
+         }},
+        {4,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() {
+                     return MakeInt64Result(ClickBench::kQuery4ResultColumn,
+                                            ClickBench::RunFourthQueryAvgUserID(table_name));
+                 },
+                 file);
+         }},
+        {5,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() {
+                     return MakeInt64Result(ClickBench::kQuery5ResultColumn,
+                                            ClickBench::RunFifthQueryDistinctUserID(table_name));
+                 },
+                 file);
+         }},
+        {6,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() {
+                     return MakeInt64Result(ClickBench::kQuery6ResultColumn,
+                                            ClickBench::RunSixthQueryDistinctSearchPhrase(table_name));
+                 },
+                 file);
+         }},
+        {7,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunBatchQuery(
+                 [&]() { return MakeQuery7Result(ClickBench::RunSeventhQueryEventDateMinMax(table_name)); }, file);
+         }},
+        {8,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeEighthQueryPlan(table_name), file);
+         }},
+        {9,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeNinthQueryPlan(table_name), file);
+         }},
+        {10,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeTenthQueryPlan(table_name), file);
+         }},
+        {11,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeEleventhQueryPlan(table_name), file);
+         }},
+        {12,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeTwelfthQueryPlan(table_name), file);
+         }},
+        {13,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeThirteenthQueryPlan(table_name), file);
+         }},
+        {14,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeFourteenthQueryPlan(table_name), file);
+         }},
+        {15,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeFifteenthQueryPlan(table_name), file);
+         }},
+        {16,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeSixteenthQueryPlan(table_name), file);
+         }},
+        {17,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeSeventeenthQueryPlan(table_name), file);
+         }},
+        {18,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeEighteenthQueryPlan(table_name), file);
+         }},
+        {19,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeNineteenthQueryPlan(table_name), file);
+         }},
+        {20,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeTwentiethQueryPlan(table_name), file);
+         }},
+        {21,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeTwentyFirstQueryPlan(table_name), file);
+         }},
+        {22,
+         [](const std::string& table_name, const std::filesystem::path& file) {
+             return RunPlan(ClickBench::MakeTwentySecondQueryPlan(table_name), file);
+         }},
+        {23, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentyThirdQueryPlan(table_name), file); }},
+        {24, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentyFourthQueryPlan(table_name), file); }},
+        {25, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentyFifthQueryPlan(table_name), file); }},
+        {26, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentySixthQueryPlan(table_name), file); }},
+        {27, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentySeventhQueryPlan(table_name), file); }},
+        {28, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentyEighthQueryPlan(table_name), file); }},
+        {29, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeTwentyNinthQueryPlan(table_name), file); }},
+        {30, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunBatchQuery([&]() { return ClickBench::RunThirtiethQuery(table_name); }, file); }},
+        {31, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyFirstQueryPlan(table_name), file); }},
+        {32, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtySecondQueryPlan(table_name), file); }},
+        {33, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyThirdQueryPlan(table_name), file); }},
+        {34, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyFourthQueryPlan(table_name), file); }},
+        {35, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyFifthQueryPlan(table_name), file); }},
+        {36, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtySixthQueryPlan(table_name), file); }},
+        {37, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtySeventhQueryPlan(table_name), file); }},
+        {38, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyEighthQueryPlan(table_name), file); }},
+        {39, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeThirtyNinthQueryPlan(table_name), file); }},
+        {40, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeFortiethQueryPlan(table_name), file); }},
+        {41, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeFortyFirstQueryPlan(table_name), file); }},
+        {42, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeFortySecondQueryPlan(table_name), file); }},
+        {43, [](const std::string& table_name,
+                const std::filesystem::path&
+                    file) { return RunPlan(ClickBench::MakeFortyThirdQueryPlan(table_name), file); }},
     };
 
     if (only_queries.empty()) {
@@ -542,17 +612,17 @@ std::vector<BenchQuery> MakeQueries(const std::set<size_t>& only_queries) {
     return filtered;
 }
 
-void CollectScanColumns(const LogicPlaner::QueryNode& query , std::vector<std::vector<std::string>>& scans) {
+void CollectScanColumns(const LogicPlaner::QueryNode& query, std::vector<std::vector<std::string>>& scans) {
     if (const auto* scan = dynamic_cast<const LogicPlaner::ScanNode*>(&query)) {
         scans.push_back(scan->ColumnNames());
     }
     for (const auto& child : query.next_nodes_) {
-        CollectScanColumns(*child , scans);
+        CollectScanColumns(*child, scans);
     }
 }
 
 void PrintColumns(std::vector<std::string> columns) {
-    std::sort(columns.begin() , columns.end());
+    std::sort(columns.begin(), columns.end());
     for (size_t i = 0; i < columns.size(); ++i) {
         if (i != 0) {
             std::cout << '|';
@@ -572,11 +642,9 @@ void ExplainQueries(const std::set<size_t>& only_queries) {
     for (const auto& query_info : MakePlanInfos(only_queries)) {
         auto query = query_info.build(table_name);
         std::vector<std::vector<std::string>> scans;
-        CollectScanColumns(*query , scans);
+        CollectScanColumns(*query, scans);
         for (size_t scan_index = 0; scan_index < scans.size(); ++scan_index) {
-            std::cout << query_info.number << ','
-                      << scan_index << ','
-                      << scans[scan_index].size() << ',';
+            std::cout << query_info.number << ',' << scan_index << ',' << scans[scan_index].size() << ',';
             PrintColumns(std::move(scans[scan_index]));
             std::cout << '\n';
         }
@@ -599,32 +667,28 @@ struct QueryResult {
     std::string error;
 };
 
-void WriteSummary(const std::vector<QueryResult>& results , const std::filesystem::path& path) {
-    std::ofstream out(path , std::ios::out);
+void WriteSummary(const std::vector<QueryResult>& results, const std::filesystem::path& path) {
+    std::ofstream out(path, std::ios::out);
     if (!out.is_open()) {
         throw std::runtime_error("Can't open summary file: " + path.string());
     }
 
     out << "query,status,rows,query_ms,write_ms,total_ms,file,read_ms,error\n";
     for (const auto& result : results) {
-        out << result.number << ','
-            << (result.ok ? "ok" : "error") << ','
-            << result.rows << ','
-            << std::fixed << std::setprecision(3) << result.query_ms << ','
-            << result.write_ms << ','
-            << result.total_ms << ',';
-        WriteEscaped(out , result.file.string());
+        out << result.number << ',' << (result.ok ? "ok" : "error") << ',' << result.rows << ',' << std::fixed
+            << std::setprecision(3) << result.query_ms << ',' << result.write_ms << ',' << result.total_ms << ',';
+        WriteEscaped(out, result.file.string());
         out << ',' << result.read_ms << ',';
-        WriteEscaped(out , result.error);
+        WriteEscaped(out, result.error);
         out << '\n';
     }
 }
 
 } // namespace
 
-int main(int argc , char* argv[]) {
+int main(int argc, char* argv[]) {
     try {
-        AutoRebuildAndReexec(argc , argv);
+        AutoRebuildAndReexec(argc, argv);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
@@ -669,40 +733,35 @@ int main(int argc , char* argv[]) {
 
             const auto start = std::chrono::steady_clock::now();
             try {
-                const BenchRun bench_run = query.run(table_name , result.file);
+                const BenchRun bench_run = query.run(table_name, result.file);
                 const auto finish = std::chrono::steady_clock::now();
                 result.rows = bench_run.rows;
                 result.query_ms = bench_run.query_ms;
                 result.read_ms = bench_run.read_ms;
                 result.write_ms = bench_run.write_ms;
-                result.total_ms = std::chrono::duration<double , std::milli>(finish - start).count();
+                result.total_ms = std::chrono::duration<double, std::milli>(finish - start).count();
                 result.ok = true;
             } catch (const std::exception& error) {
                 const auto finish = std::chrono::steady_clock::now();
-                result.total_ms = std::chrono::duration<double , std::milli>(finish - start).count();
+                result.total_ms = std::chrono::duration<double, std::milli>(finish - start).count();
                 result.error = error.what();
 
-                std::ofstream empty(result.file , std::ios::out);
+                std::ofstream empty(result.file, std::ios::out);
                 if (!empty.is_open()) {
                     throw;
                 }
             }
 
-            std::cout << result.number << ','
-                      << (result.ok ? "ok" : "error") << ','
-                      << result.rows << ','
-                      << std::fixed << std::setprecision(3) << result.query_ms << ','
-                      << result.write_ms << ','
-                      << result.total_ms << ','
-                      << result.file.string() << ','
-                      << result.read_ms << '\n';
+            std::cout << result.number << ',' << (result.ok ? "ok" : "error") << ',' << result.rows << ',' << std::fixed
+                      << std::setprecision(3) << result.query_ms << ',' << result.write_ms << ',' << result.total_ms
+                      << ',' << result.file.string() << ',' << result.read_ms << '\n';
             if (!result.ok) {
                 std::cerr << "q" << result.number << ": " << result.error << '\n';
             }
             results.push_back(std::move(result));
         }
 
-        WriteSummary(results , output_dir / "summary.csv");
+        WriteSummary(results, output_dir / "summary.csv");
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

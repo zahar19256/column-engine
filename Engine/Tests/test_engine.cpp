@@ -11,8 +11,7 @@ namespace {
 
 class SingleBatchExecutor : public Executor {
 public:
-    explicit SingleBatchExecutor(Batch batch) : batch_(std::move(batch)) {
-    }
+    explicit SingleBatchExecutor(Batch batch) : batch_(std::move(batch)) {}
 
     bool Next(Batch& data) override {
         if (done_) {
@@ -79,10 +78,10 @@ Batch MakeMixedBatch() {
     Batch batch;
     batch.SetScheme(scheme);
     auto names = std::make_shared<StringColumn>(batch.GetStringArena());
-    names->AppendFromString("a" , 1);
-    names->AppendFromString("b" , 1);
-    names->AppendFromString("c" , 1);
-    names->AppendFromString("d" , 1);
+    names->AppendFromString("a", 1);
+    names->AppendFromString("b", 1);
+    names->AppendFromString("c", 1);
+    names->AppendFromString("d", 1);
     batch.AddColumn(values);
     batch.AddColumn(names);
     batch.InitMsk();
@@ -96,9 +95,9 @@ Batch MakeStringBatch() {
     Batch batch;
     batch.SetScheme(scheme);
     auto names = std::make_shared<StringColumn>(batch.GetStringArena());
-    names->AppendFromString("" , 0);
-    names->AppendFromString("abc" , 3);
-    names->AppendFromString("x" , 1);
+    names->AppendFromString("", 0);
+    names->AppendFromString("abc", 3);
+    names->AppendFromString("x", 1);
     batch.AddColumn(names);
     batch.InitMsk();
     return batch;
@@ -254,7 +253,7 @@ TEST(LiteralExpr, EvalBatchReturnsFilledTypedColumn) {
 
     Batch batch = MakeInt64Batch();
     EvalContext env{batch.GetStringArena()};
-    const auto result = As<Int16Column>(literal.EvalBatch(batch , env));
+    const auto result = As<Int16Column>(literal.EvalBatch(batch, env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 42);
@@ -266,7 +265,7 @@ TEST(LiteralExpr, InfersTypeAndRebuildsColumnPerBatch) {
 
     Batch first_batch = MakeInt64Batch();
     EvalContext first_env{first_batch.GetStringArena()};
-    const auto first = As<StringColumn>(string_literal.EvalBatch(first_batch , first_env));
+    const auto first = As<StringColumn>(string_literal.EvalBatch(first_batch, first_env));
     ASSERT_NE(first, nullptr);
     ASSERT_EQ(first->Size(), 3);
     EXPECT_EQ(first->At(0), "x");
@@ -276,7 +275,7 @@ TEST(LiteralExpr, InfersTypeAndRebuildsColumnPerBatch) {
     mask.set();
     Batch second_batch = MakeInt64Batch(mask);
     EvalContext second_env{second_batch.GetStringArena()};
-    const auto second = As<StringColumn>(string_literal.EvalBatch(second_batch , second_env));
+    const auto second = As<StringColumn>(string_literal.EvalBatch(second_batch, second_env));
     ASSERT_NE(second, nullptr);
     ASSERT_EQ(second->Size(), 3);
     EXPECT_EQ(second->At(1), "x");
@@ -288,7 +287,7 @@ TEST(UnaryExpr, LengthReturnsStringSizes) {
     EXPECT_EQ(length_expr->GetType(), ColumnType::Int64);
     Batch batch = MakeStringBatch();
     EvalContext env{batch.GetStringArena()};
-    const auto result = As<Int64Column>(length_expr->EvalBatch(batch , env));
+    const auto result = As<Int64Column>(length_expr->EvalBatch(batch, env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 0);
@@ -303,20 +302,18 @@ TEST(UnaryExpr, RegexpReplaceRewritesStringColumn) {
     Batch batch;
     batch.SetScheme(scheme);
     auto referers = std::make_shared<StringColumn>(batch.GetStringArena());
-    referers->AppendFromString("https://www.example.com/path" , 28);
-    referers->AppendFromString("http://openai.com/docs" , 22);
-    referers->AppendFromString("plain" , 5);
+    referers->AppendFromString("https://www.example.com/path", 28);
+    referers->AppendFromString("http://openai.com/docs", 22);
+    referers->AppendFromString("plain", 5);
     batch.AddColumn(referers);
     batch.InitMsk();
 
-    const auto expression = MakeRegexpReplaceExpr(
-        MakeColumnExpr("referer", ColumnType::String),
-        R"(^https?://(?:www\.)?([^/]+)/.*$)",
-        R"(\1)");
+    const auto expression = MakeRegexpReplaceExpr(MakeColumnExpr("referer", ColumnType::String),
+                                                  R"(^https?://(?:www\.)?([^/]+)/.*$)", R"(\1)");
 
     EXPECT_EQ(expression->GetType(), ColumnType::String);
     EvalContext env{batch.GetStringArena()};
-    const auto result = As<StringColumn>(expression->EvalBatch(batch , env));
+    const auto result = As<StringColumn>(expression->EvalBatch(batch, env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), "example.com");
@@ -325,15 +322,13 @@ TEST(UnaryExpr, RegexpReplaceRewritesStringColumn) {
 }
 
 TEST(BinaryExpr, SubtractsLiteralFromColumn) {
-    auto sub_expr = MakeSubExpr(
-        MakeColumnExpr("value", ColumnType::Int64),
-        MakeLiteralExpr(int64_t{3}, ColumnType::Int64),
-        ColumnType::Int64);
+    auto sub_expr = MakeSubExpr(MakeColumnExpr("value", ColumnType::Int64),
+                                MakeLiteralExpr(int64_t{3}, ColumnType::Int64), ColumnType::Int64);
 
     EXPECT_EQ(sub_expr->GetType(), ColumnType::Int64);
     Batch batch = MakeInt64Batch();
     EvalContext env{batch.GetStringArena()};
-    const auto result = As<Int64Column>(sub_expr->EvalBatch(batch , env));
+    const auto result = As<Int64Column>(sub_expr->EvalBatch(batch, env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 3);
     EXPECT_EQ(result->At(0), 7);
@@ -342,20 +337,17 @@ TEST(BinaryExpr, SubtractsLiteralFromColumn) {
 }
 
 TEST(CaseWhenExpr, SelectsFirstMatchingBranchAndElse) {
-    std::vector<std::pair<std::shared_ptr<PredicateExpr> , std::shared_ptr<ScalarExpr>>> cases;
-    cases.emplace_back(
-        std::shared_ptr<PredicateExpr>(MakeFilter({"value" , "15" , Filters::OpType::Greater})) ,
-        MakeColumnExpr("name", ColumnType::String));
+    std::vector<std::pair<std::shared_ptr<PredicateExpr>, std::shared_ptr<ScalarExpr>>> cases;
+    cases.emplace_back(std::shared_ptr<PredicateExpr>(MakeFilter({"value", "15", Filters::OpType::Greater})),
+                       MakeColumnExpr("name", ColumnType::String));
 
-    auto case_expr = MakeCaseWhenExpr(
-        std::move(cases),
-        MakeLiteralExpr(std::string(""), ColumnType::String),
-        ColumnType::String);
+    auto case_expr =
+        MakeCaseWhenExpr(std::move(cases), MakeLiteralExpr(std::string(""), ColumnType::String), ColumnType::String);
 
     EXPECT_EQ(case_expr->GetType(), ColumnType::String);
     Batch batch = MakeMixedBatch();
     EvalContext env{batch.GetStringArena()};
-    const auto result = As<StringColumn>(case_expr->EvalBatch(batch , env));
+    const auto result = As<StringColumn>(case_expr->EvalBatch(batch, env));
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->Size(), 4);
     EXPECT_EQ(result->At(0), "");
@@ -405,66 +397,72 @@ TEST(AggregationExecutor, SumsLengthExpression) {
 }
 
 TEST(AggregationExecutor, ComputesMinMaxAvgAndCount) {
-    EXPECT_EQ(RunSingleInt64Aggregation({
-                  .type = Aggregation::AggregationType::Min,
-                  .expression = MakeColumnExpr("value", ColumnType::Int64),
-                  .new_name = "min_value",
-                  .input_type = ColumnType::Int64,
-                  .output_type = ColumnType::Int64,
-              },
-              MakeInt64Batch()),
+    EXPECT_EQ(RunSingleInt64Aggregation(
+                  {
+                      .type = Aggregation::AggregationType::Min,
+                      .expression = MakeColumnExpr("value", ColumnType::Int64),
+                      .new_name = "min_value",
+                      .input_type = ColumnType::Int64,
+                      .output_type = ColumnType::Int64,
+                  },
+                  MakeInt64Batch()),
               10);
 
-    EXPECT_EQ(RunSingleInt64Aggregation({
-                  .type = Aggregation::AggregationType::Max,
-                  .expression = MakeColumnExpr("value", ColumnType::Int64),
-                  .new_name = "max_value",
-                  .input_type = ColumnType::Int64,
-                  .output_type = ColumnType::Int64,
-              },
-              MakeInt64Batch()),
+    EXPECT_EQ(RunSingleInt64Aggregation(
+                  {
+                      .type = Aggregation::AggregationType::Max,
+                      .expression = MakeColumnExpr("value", ColumnType::Int64),
+                      .new_name = "max_value",
+                      .input_type = ColumnType::Int64,
+                      .output_type = ColumnType::Int64,
+                  },
+                  MakeInt64Batch()),
               30);
 
-    EXPECT_EQ(RunSingleInt64Aggregation({
-                  .type = Aggregation::AggregationType::Avg,
-                  .expression = MakeColumnExpr("value", ColumnType::Int64),
-                  .new_name = "avg_value",
-                  .input_type = ColumnType::Int64,
-                  .output_type = ColumnType::Int64,
-              },
-              MakeInt64Batch()),
+    EXPECT_EQ(RunSingleInt64Aggregation(
+                  {
+                      .type = Aggregation::AggregationType::Avg,
+                      .expression = MakeColumnExpr("value", ColumnType::Int64),
+                      .new_name = "avg_value",
+                      .input_type = ColumnType::Int64,
+                      .output_type = ColumnType::Int64,
+                  },
+                  MakeInt64Batch()),
               20);
 
-    EXPECT_EQ(RunSingleInt64Aggregation({
-                  .type = Aggregation::AggregationType::Count,
-                  .expression = MakeColumnExpr("value", ColumnType::Int64),
-                  .new_name = "count_value",
-                  .input_type = ColumnType::Int64,
-                  .output_type = ColumnType::Int64,
-              },
-              MakeInt64Batch()),
+    EXPECT_EQ(RunSingleInt64Aggregation(
+                  {
+                      .type = Aggregation::AggregationType::Count,
+                      .expression = MakeColumnExpr("value", ColumnType::Int64),
+                      .new_name = "count_value",
+                      .input_type = ColumnType::Int64,
+                      .output_type = ColumnType::Int64,
+                  },
+                  MakeInt64Batch()),
               3);
 }
 
 TEST(AggregationExecutor, ComputesMinMaxForDateColumns) {
-    EXPECT_EQ(RunSingleDateAggregation({
-                  .type = Aggregation::AggregationType::Min,
-                  .expression = MakeColumnExpr("event_date", ColumnType::Date),
-                  .new_name = "min_date",
-                  .input_type = ColumnType::Date,
-                  .output_type = ColumnType::Unknown,
-              },
-              MakeDateBatch()),
+    EXPECT_EQ(RunSingleDateAggregation(
+                  {
+                      .type = Aggregation::AggregationType::Min,
+                      .expression = MakeColumnExpr("event_date", ColumnType::Date),
+                      .new_name = "min_date",
+                      .input_type = ColumnType::Date,
+                      .output_type = ColumnType::Unknown,
+                  },
+                  MakeDateBatch()),
               Data::ParseDate("2013-07-15"));
 
-    EXPECT_EQ(RunSingleDateAggregation({
-                  .type = Aggregation::AggregationType::Max,
-                  .expression = MakeColumnExpr("event_date", ColumnType::Date),
-                  .new_name = "max_date",
-                  .input_type = ColumnType::Date,
-                  .output_type = ColumnType::Unknown,
-              },
-              MakeDateBatch()),
+    EXPECT_EQ(RunSingleDateAggregation(
+                  {
+                      .type = Aggregation::AggregationType::Max,
+                      .expression = MakeColumnExpr("event_date", ColumnType::Date),
+                      .new_name = "max_date",
+                      .input_type = ColumnType::Date,
+                      .output_type = ColumnType::Unknown,
+                  },
+                  MakeDateBatch()),
               Data::ParseDate("2013-07-19"));
 }
 
@@ -597,10 +595,8 @@ TEST(OrderByExecutor, UsesEquivalenceClassesAcrossSortKeys) {
     input.AddColumn(second_key);
     input.InitMsk();
 
-    OrderByExecutor executor(
-        {MakeColumnExpr("a", ColumnType::Int64), MakeColumnExpr("b", ColumnType::Int64)},
-        2,
-        {SortDirection::Asc, SortDirection::Desc});
+    OrderByExecutor executor({MakeColumnExpr("a", ColumnType::Int64), MakeColumnExpr("b", ColumnType::Int64)}, 2,
+                             {SortDirection::Asc, SortDirection::Desc});
     executor.child = std::make_shared<SingleBatchExecutor>(std::move(input));
 
     Batch output;
@@ -622,14 +618,12 @@ TEST(OrderByExecutor, UsesEquivalenceClassesAcrossSortKeys) {
 TEST(FilterExecutor, LikeMatchesSqlWildcards) {
     Utility::StringArena arena;
     auto values = std::make_shared<StringColumn>(&arena);
-    values->AppendFromString("https://example.com/search" , 26);
-    values->AppendFromString("http://example.com/search" , 25);
-    values->AppendFromString("https://example.com/about" , 25);
+    values->AppendFromString("https://example.com/search", 26);
+    values->AppendFromString("http://example.com/search", 25);
+    values->AppendFromString("https://example.com/about", 25);
 
-    const boost::dynamic_bitset<> result = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("https://%/search"));
+    const boost::dynamic_bitset<> result =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("https://%/search"));
 
     ASSERT_EQ(result.size(), 3);
     EXPECT_TRUE(result[0]);
@@ -640,35 +634,29 @@ TEST(FilterExecutor, LikeMatchesSqlWildcards) {
 TEST(FilterExecutor, LikeSupportsSingleCharacterWildcardAndEscapes) {
     Utility::StringArena arena;
     auto values = std::make_shared<StringColumn>(&arena);
-    values->AppendFromString("ab" , 2);
-    values->AppendFromString("ac" , 2);
-    values->AppendFromString("a_" , 2);
-    values->AppendFromString("a%" , 2);
+    values->AppendFromString("ab", 2);
+    values->AppendFromString("ac", 2);
+    values->AppendFromString("a_", 2);
+    values->AppendFromString("a%", 2);
 
-    const boost::dynamic_bitset<> single_char = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("a_"));
+    const boost::dynamic_bitset<> single_char =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("a_"));
     ASSERT_EQ(single_char.size(), 4);
     EXPECT_TRUE(single_char[0]);
     EXPECT_TRUE(single_char[1]);
     EXPECT_TRUE(single_char[2]);
     EXPECT_TRUE(single_char[3]);
 
-    const boost::dynamic_bitset<> escaped_underscore = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("a\\_"));
+    const boost::dynamic_bitset<> escaped_underscore =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("a\\_"));
     ASSERT_EQ(escaped_underscore.size(), 4);
     EXPECT_FALSE(escaped_underscore[0]);
     EXPECT_FALSE(escaped_underscore[1]);
     EXPECT_TRUE(escaped_underscore[2]);
     EXPECT_FALSE(escaped_underscore[3]);
 
-    const boost::dynamic_bitset<> escaped_percent = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("a\\%"));
+    const boost::dynamic_bitset<> escaped_percent =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("a\\%"));
     ASSERT_EQ(escaped_percent.size(), 4);
     EXPECT_FALSE(escaped_percent[0]);
     EXPECT_FALSE(escaped_percent[1]);
@@ -679,45 +667,37 @@ TEST(FilterExecutor, LikeSupportsSingleCharacterWildcardAndEscapes) {
 TEST(FilterExecutor, LikeUsesSimpleStringFastPaths) {
     Utility::StringArena arena;
     auto values = std::make_shared<StringColumn>(&arena);
-    values->AppendFromString("https://google.com/search" , 25);
-    values->AppendFromString("https://example.com/google" , 26);
-    values->AppendFromString("http://example.com" , 18);
-    values->AppendFromString("plain" , 5);
+    values->AppendFromString("https://google.com/search", 25);
+    values->AppendFromString("https://example.com/google", 26);
+    values->AppendFromString("http://example.com", 18);
+    values->AppendFromString("plain", 5);
 
-    const boost::dynamic_bitset<> contains = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("%google%"));
+    const boost::dynamic_bitset<> contains =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("%google%"));
     ASSERT_EQ(contains.size(), 4);
     EXPECT_TRUE(contains[0]);
     EXPECT_TRUE(contains[1]);
     EXPECT_FALSE(contains[2]);
     EXPECT_FALSE(contains[3]);
 
-    const boost::dynamic_bitset<> starts_with = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("https://%"));
+    const boost::dynamic_bitset<> starts_with =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("https://%"));
     ASSERT_EQ(starts_with.size(), 4);
     EXPECT_TRUE(starts_with[0]);
     EXPECT_TRUE(starts_with[1]);
     EXPECT_FALSE(starts_with[2]);
     EXPECT_FALSE(starts_with[3]);
 
-    const boost::dynamic_bitset<> ends_with = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::Like,
-        std::string_view("%google"));
+    const boost::dynamic_bitset<> ends_with =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::Like, std::string_view("%google"));
     ASSERT_EQ(ends_with.size(), 4);
     EXPECT_FALSE(ends_with[0]);
     EXPECT_TRUE(ends_with[1]);
     EXPECT_FALSE(ends_with[2]);
     EXPECT_FALSE(ends_with[3]);
 
-    const boost::dynamic_bitset<> not_like = Filters::ColumnTypedFilter(
-        *values,
-        Filters::OpType::NotLike,
-        std::string_view("%google%"));
+    const boost::dynamic_bitset<> not_like =
+        Filters::ColumnTypedFilter(*values, Filters::OpType::NotLike, std::string_view("%google%"));
     ASSERT_EQ(not_like.size(), 4);
     EXPECT_FALSE(not_like[0]);
     EXPECT_FALSE(not_like[1]);

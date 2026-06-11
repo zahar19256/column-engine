@@ -1,7 +1,7 @@
 #pragma once
-#include <stdint.h>
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+#include <stdint.h>
 #include <string>
 #include <string_view>
 
@@ -10,13 +10,13 @@ struct GermanStrHash;
 class GermanStr {
 public:
     GermanStr() {
-        low_ = 0 , high_ = 0;
+        low_ = 0, high_ = 0;
     }
-    GermanStr(const char* start , size_t size) {
+    GermanStr(const char* start, size_t size) {
         if (size <= 12) {
             high_ = static_cast<uint32_t>(size);
             low_ = 0;
-            memcpy(reinterpret_cast<char*>(this) + 4 , start , size);
+            memcpy(reinterpret_cast<char*>(this) + 4, start, size);
         } else {
             uint32_t prefix = 0;
             memcpy(&prefix, start, 4);
@@ -30,7 +30,7 @@ public:
         if (size <= 12) {
             high_ = static_cast<uint32_t>(size);
             low_ = 0;
-            memcpy(reinterpret_cast<char*>(this) + 4 , start , size);
+            memcpy(reinterpret_cast<char*>(this) + 4, start, size);
         } else {
             uint32_t prefix = 0;
             memcpy(&prefix, start, 4);
@@ -39,8 +39,7 @@ public:
         }
     }
 
-    GermanStr(GermanStr&& other) : high_(std::move(other.high_)) , low_(std::move(other.low_)) {
-    }
+    GermanStr(GermanStr&& other) : high_(std::move(other.high_)), low_(std::move(other.low_)) {}
     GermanStr(const GermanStr& other) = default;
 
     GermanStr& operator=(const GermanStr& other) = default;
@@ -148,9 +147,9 @@ public:
     std::string_view View() const {
         size_t sz = Size();
         if (sz <= 12) {
-            return std::string_view(reinterpret_cast<const char*>(this) + 4 , sz);
+            return std::string_view(reinterpret_cast<const char*>(this) + 4, sz);
         } else {
-            return std::string_view(reinterpret_cast<const char*>(low_) , sz);
+            return std::string_view(reinterpret_cast<const char*>(low_), sz);
         }
     }
 
@@ -185,6 +184,7 @@ struct GermanStrEq {
     }
 };
 
+// LLM hash:
 struct GermanStrHash {
     static inline uint64_t Mix(uint64_t value) noexcept {
         value ^= value >> 30;
@@ -197,13 +197,13 @@ struct GermanStrHash {
 
     static inline uint64_t Read64(const char* data) noexcept {
         uint64_t value;
-        std::memcpy(&value , data , sizeof(value));
+        std::memcpy(&value, data, sizeof(value));
         return value;
     }
 
-    static inline uint64_t ReadTail(const char* data , size_t size) noexcept {
+    static inline uint64_t ReadTail(const char* data, size_t size) noexcept {
         uint64_t value = 0;
-        std::memcpy(&value , data , size);
+        std::memcpy(&value, data, size);
         return value;
     }
 
@@ -227,7 +227,7 @@ struct GermanStrHash {
             offset += 8;
         }
         if (offset < size) {
-            hash ^= Mix(ReadTail(data + offset , size - offset) + second_seed + offset);
+            hash ^= Mix(ReadTail(data + offset, size - offset) + second_seed + offset);
         }
         return static_cast<size_t>(Mix(hash));
     }

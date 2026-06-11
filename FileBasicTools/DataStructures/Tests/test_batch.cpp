@@ -1,16 +1,16 @@
-#include <gtest/gtest.h>
 #include "Batch.h"
 #include "Column.h" // Здесь лежат Int64Column, StringColumn, As<T>
-#include "Scheme.h"
 #include "Row.h"
+#include "Scheme.h"
+#include <gtest/gtest.h>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 // Вспомогательная функция для создания тестового чанка
 StringBacket CreateMockChunk() {
     StringBacket chunk;
-    
+
     // Строка 1: "100", "Alice"
     chunk.Add("100");
     chunk.Add("Alice");
@@ -34,7 +34,7 @@ TEST(BatchTest, DefaultConstructor) {
 // 2. Тест ручной сборки батча (AddColumn)
 TEST(BatchTest, ManualAssembly) {
     Batch batch;
-    
+
     // Создаем схему для порядка
     Scheme scheme;
     scheme.Push_Back({"num", ColumnType::Int64});
@@ -43,17 +43,17 @@ TEST(BatchTest, ManualAssembly) {
     // Создаем и заполняем колонку
     auto intCol = std::make_shared<Int64Column>();
     intCol->Push_Back(42);
-    
+
     // Добавляем в батч
     batch.AddColumn(intCol);
 
     ASSERT_EQ(batch.Size(), 1); // 1 колонка
     EXPECT_FALSE(batch.Empty());
-    
+
     // Проверяем, что достаем то же самое
     auto retrieved = batch.GetColumn(0);
     EXPECT_EQ(retrieved, intCol);
-    
+
     // Проверяем данные внутри
     auto casted = As<Int64Column>(retrieved);
     ASSERT_NE(casted, nullptr);
@@ -81,7 +81,7 @@ TEST(BatchTest, ConstructorFromChunk_MixedTypes) {
     // 5. Проверка первой колонки (Int64)
     auto col0 = batch.GetColumn(0);
     ASSERT_NE(col0, nullptr);
-    
+
     // Используем As<T> из Column.h
     auto intCol = As<Int64Column>(col0);
     ASSERT_NE(intCol, nullptr) << "Column 0 should be Int64Column";
@@ -116,7 +116,7 @@ TEST(BatchTest, ConstructorFromChunk_InvalidData) {
 TEST(BatchTest, Clear) {
     Scheme scheme;
     scheme.Push_Back({"col", ColumnType::Int64});
-    
+
     StringBacket chunk;
     chunk.Add("1");
     chunk.EndRow();
@@ -136,7 +136,7 @@ TEST(BatchTest, OutOfBoundsAccess) {
     // Если в вашей реализации используется vector::at(), будет throw.
     // Если operator[], то тест писать опасно (UB).
     // Предположим безопасный доступ или проверим, что вызовет исключение вектора:
-    
+
     // Раскомментируйте, если есть проверки границ:
     // EXPECT_THROW(batch.GetColumn(0), std::out_of_range);
     // EXPECT_THROW(batch.GetType(0), std::out_of_range);

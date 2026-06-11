@@ -1,11 +1,11 @@
 #pragma once
-#include "Scheme.h"
 #include "Column.h"
 #include "Row.h"
+#include "Scheme.h"
 #include "Utility.h"
-#include <vector>
-#include <memory>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
+#include <memory>
+#include <vector>
 
 class Batch {
 public:
@@ -14,10 +14,10 @@ public:
     Batch& operator=(const Batch&) = delete;
     Batch(Batch&&) noexcept = default;
     Batch& operator=(Batch&&) noexcept = default;
-    Batch(const StringBacket& chunk , const Scheme& scheme) : scheme_(scheme) {
+    Batch(const StringBacket& chunk, const Scheme& scheme) : scheme_(scheme) {
         ChunkToBatch(chunk);
     }
-    void Init(const Scheme& scheme , bool convert = false);
+    void Init(const Scheme& scheme, bool convert = false);
     void Init();
     void InitMsk();
     void SetScheme(const Scheme& scheme);
@@ -27,8 +27,8 @@ public:
     void ApplyMsk(const boost::dynamic_bitset<>& msk);
     void AddColumn(std::shared_ptr<Column> column);
     void AddRowFromCSV(const StringBacket& val);
-    void AddAlias(const std::string& current_name , const std::string& alias);
-    void MergeBatches(Batch& result , Batch& new_data);
+    void AddAlias(const std::string& current_name, const std::string& alias);
+    void MergeBatches(Batch& result, Batch& new_data);
 
     ColumnType GetType(size_t index) const;
     const Scheme& GetScheme() const;
@@ -43,12 +43,13 @@ public:
     bool Empty() const;
     void Clear();
     void Reset();
+
 private:
     void EnsureStringArena();
     void ChunkToBatch(const StringBacket& chunk);
     Scheme scheme_;
     std::unique_ptr<Utility::StringArena> string_arena_ = std::make_unique<Utility::StringArena>();
-    std::vector <std::shared_ptr<Column>> data_;
+    std::vector<std::shared_ptr<Column>> data_;
     boost::dynamic_bitset<> mask_;
     bool has_mask_ = false;
     size_t rows_ = 0;

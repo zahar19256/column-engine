@@ -15,5 +15,3 @@ const char* GermanStr::Data() const noexcept {
 uint32_t GermanStr::GetPref() const noexcept {
     return high_ >> 32;
 }
-
-

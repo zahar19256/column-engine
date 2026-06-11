@@ -9,6 +9,23 @@ set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -Wpedantic -Wno-unused-parameter -Wno-unused-function"
 )
 
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/ClangFormat.cmake")
+add_clang_format_targets(file-basic-tools "${CMAKE_CURRENT_SOURCE_DIR}")
+if(TARGET file-basic-tools-format)
+    if(TARGET format)
+        add_dependencies(format file-basic-tools-format)
+    else()
+        add_custom_target(format DEPENDS file-basic-tools-format)
+    endif()
+endif()
+if(TARGET file-basic-tools-format-check)
+    if(TARGET format-check)
+        add_dependencies(format-check file-basic-tools-format-check)
+    else()
+        add_custom_target(format-check DEPENDS file-basic-tools-format-check)
+    endif()
+endif()
+
 option(FILE_BASIC_TOOLS_BUILD_TESTS "Build FileBasicTools tests" ${PROJECT_IS_TOP_LEVEL})
 
 set(DATASTRUCT_SOURCES

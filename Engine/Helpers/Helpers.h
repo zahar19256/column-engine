@@ -5,4 +5,3 @@
 
 #include <memory>
 #include <stdexcept>
-

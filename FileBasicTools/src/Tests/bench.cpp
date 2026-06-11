@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <string>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 #include "CSVConvertor.h"
 namespace fs = std::filesystem;
@@ -12,8 +12,7 @@ namespace {
 fs::path FindFileBasicToolsRoot() {
     fs::path current = fs::current_path();
     for (size_t depth = 0; depth < 8; ++depth) {
-        if (fs::exists(current / "src/Tests/hits_sample.csv") &&
-            fs::exists(current / "src/Tests/hits_scheme.csv")) {
+        if (fs::exists(current / "src/Tests/hits_sample.csv") && fs::exists(current / "src/Tests/hits_scheme.csv")) {
             return current;
         }
         if (fs::exists(current / "FileBasicTools/src/Tests/hits_sample.csv") &&

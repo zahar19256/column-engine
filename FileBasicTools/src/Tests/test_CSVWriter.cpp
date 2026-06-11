@@ -1,22 +1,24 @@
-#include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include "CSVWriter.h"
 #include "Batch.h"
+#include "CSVWriter.h"
 #include "Column.h"
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
 
 namespace fs = std::filesystem;
 
 std::string ReadFileToString(const std::string& path) {
     std::ifstream t(path);
-    if (!t.is_open()) return "";
+    if (!t.is_open())
+        return "";
     std::stringstream buffer;
     buffer << t.rdbuf();
     return buffer.str();
 }
 
-// Важно так как у меня этот класс используется для перегонки из моего формата обратно в CSV я накостылил приписку upd чтобы не ззатирать старый файл.
+// Важно так как у меня этот класс используется для перегонки из моего формата обратно в CSV я накостылил приписку upd
+// чтобы не ззатирать старый файл.
 std::string GetExpectedFilename(const std::string& inputPath) {
     fs::path p(inputPath);
     std::string stem = p.stem().string();
@@ -30,11 +32,13 @@ protected:
 
     void SetUp() override {
         expectedFile = GetExpectedFilename(testFile);
-        if (fs::exists(expectedFile)) fs::remove(expectedFile);
+        if (fs::exists(expectedFile))
+            fs::remove(expectedFile);
     }
 
     void TearDown() override {
-        if (fs::exists(expectedFile)) fs::remove(expectedFile);
+        if (fs::exists(expectedFile))
+            fs::remove(expectedFile);
     }
 };
 
@@ -53,18 +57,18 @@ TEST_F(CSVWriterTest, LowLevelPrimitives) {
 TEST_F(CSVWriterTest, StringEscaping) {
     {
         CSVWriter writer(testFile);
-        
-        writer.WriteString("Hello, World"); 
+
+        writer.WriteString("Hello, World");
         writer.WriteDelimetr(',');
-        
-        writer.WriteString("Says \"Hi\""); 
-        
+
+        writer.WriteString("Says \"Hi\"");
+
         writer.WriteDelimetr('\n');
     }
 
     std::string content = ReadFileToString(expectedFile);
     std::string expected = "\"Hello, World\",\"Says \"\"Hi\"\"\"\n";
-    
+
     EXPECT_EQ(content, expected);
 }
 
@@ -80,9 +84,9 @@ TEST_F(CSVWriterTest, WriteBatch) {
     batch.SetScheme(scheme);
 
     auto col2 = std::make_shared<StringColumn>(batch.GetStringArena());
-    col2->AppendFromString("Alice" , 5);
-    col2->AppendFromString("Bob" , 3);
-    
+    col2->AppendFromString("Alice", 5);
+    col2->AppendFromString("Bob", 3);
+
     batch.AddColumn(col1);
     batch.AddColumn(col2);
 
@@ -92,7 +96,7 @@ TEST_F(CSVWriterTest, WriteBatch) {
     }
 
     std::string content = ReadFileToString(expectedFile);
-    
+
     std::string expected = "1,Alice\n2,Bob\n";
     EXPECT_EQ(content, expected);
 }
@@ -108,8 +112,8 @@ TEST_F(CSVWriterTest, WriteBatch_ComplexData) {
     batch.SetScheme(scheme);
 
     auto col2 = std::make_shared<StringColumn>(batch.GetStringArena());
-    col2->AppendFromString("Line1\nLine2,Part3" , 17);
-    
+    col2->AppendFromString("Line1\nLine2,Part3", 17);
+
     batch.AddColumn(col1);
     batch.AddColumn(col2);
 
@@ -119,7 +123,7 @@ TEST_F(CSVWriterTest, WriteBatch_ComplexData) {
     }
 
     std::string content = ReadFileToString(expectedFile);
-    
+
     std::string expected = "100,\"Line1\nLine2,Part3\"\n";
     EXPECT_EQ(content, expected);
 }
@@ -139,7 +143,8 @@ TEST_F(CSVWriterTest, CustomDelimiter) {
 
 TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
     const std::string output = "test_writer_exact.csv";
-    if (fs::exists(output)) fs::remove(output);
+    if (fs::exists(output))
+        fs::remove(output);
 
     auto int8_col = std::make_shared<Int8Column>();
     int8_col->Push_Back(1);
@@ -187,8 +192,8 @@ TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
     batch.SetScheme(scheme);
 
     auto string_col = std::make_shared<StringColumn>(batch.GetStringArena());
-    string_col->AppendFromString("plain" , 5);
-    string_col->AppendFromString("quoted,value" , 12);
+    string_col->AppendFromString("plain", 5);
+    string_col->AppendFromString("quoted,value", 12);
 
     batch.AddColumn(int8_col);
     batch.AddColumn(int16_col);
@@ -211,10 +216,10 @@ TEST_F(CSVWriterTest, WriteBatch_AllTypesWithHeaderAndMaskToExactPath) {
     }
 
     std::string content = ReadFileToString(output);
-    std::string expected =
-        "i8,i16,i32,i64,i128,d,s,date,ts\n"
-        "2,20,200,2000,-1000000000000000000,2.5,\"quoted,value\",2013-07-16,2013-07-16 11:00:00\n";
+    std::string expected = "i8,i16,i32,i64,i128,d,s,date,ts\n"
+                           "2,20,200,2000,-1000000000000000000,2.5,\"quoted,value\",2013-07-16,2013-07-16 11:00:00\n";
     EXPECT_EQ(content, expected);
 
-    if (fs::exists(output)) fs::remove(output);
+    if (fs::exists(output))
+        fs::remove(output);
 }
