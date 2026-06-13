@@ -1,6 +1,6 @@
-#include "CSVConvertor.h"
+#include "CsvConvertor.h"
 #include "BelZWriter.h"
-#include "CSVReader.h"
+#include "CsvReader.h"
 #include "Row.h"
 #include "Scheme.h"
 #include <cstring>

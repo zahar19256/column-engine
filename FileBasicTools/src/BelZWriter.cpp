@@ -1,5 +1,5 @@
 #include "BelZWriter.h"
-#include "CSVReader.h"
+#include "CsvReader.h"
 #include "Coder.h"
 #include "Column.h"
 #include "Scheme.h"

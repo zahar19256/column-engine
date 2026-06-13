@@ -1,5 +1,5 @@
 #pragma once
-#include "CSVReader.h"
+#include "CsvReader.h"
 #include "MetaData.h"
 #include "Scheme.h"
 #include <string>

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "CSVConvertor.h"
+#include "CsvConvertor.h"
 namespace fs = std::filesystem;
 
 namespace {

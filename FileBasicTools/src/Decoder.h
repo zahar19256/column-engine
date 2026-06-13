@@ -77,41 +77,38 @@ inline std::shared_ptr<Column> DecodeRaw(EncodedColumnView column, ColumnType ty
 
 inline std::shared_ptr<Column> DecodeDictionary(EncodedColumnView column, ColumnType type,
                                                 Utility::StringArena* arena = nullptr) {
-    if (type != ColumnType::String) {
-        throw std::runtime_error("Dictionary codec is supported only for string columns!");
-    }
-    if (arena == nullptr) {
-        throw std::runtime_error("String arena is required for dictionary string decoder!");
-    }
     size_t pos = 0;
     int16_t unique_count_signed = 0;
-    memcpy(&unique_count_signed, column.data + pos, sizeof(unique_count_signed));
+    std::memcpy(&unique_count_signed, column.data + pos, sizeof(unique_count_signed));
     pos += sizeof(unique_count_signed);
     size_t unique_count = static_cast<size_t>(unique_count_signed);
-
     std::vector<int32_t> offsets(unique_count);
     if (unique_count != 0) {
-        memcpy(offsets.data(), column.data + pos, unique_count * sizeof(int32_t));
+        std::memcpy(offsets.data(), column.data + pos, unique_count * sizeof(int32_t));
         pos += unique_count * sizeof(int32_t);
     }
-
     size_t dictionary_bytes = unique_count == 0 ? 0 : static_cast<size_t>(offsets.back());
     const char* dictionary_data = reinterpret_cast<const char*>(column.data + pos);
     std::string_view dictionary = arena->Add(dictionary_data, dictionary_bytes);
     pos += dictionary_bytes;
-
+    std::vector<GermanStr> dict_strings;
+    dict_strings.reserve(unique_count);
+    size_t current_start = 0;
+    for (size_t i = 0; i < unique_count; ++i) {
+        size_t current_end = static_cast<size_t>(offsets[i]);
+        dict_strings.emplace_back(dictionary.data() + current_start, current_end - current_start);
+        current_start = current_end;
+    }
     auto result = std::make_shared<StringColumn>(arena);
     size_t rows_count = (column.size - pos) / sizeof(int16_t);
     result->Reserve(rows_count);
+    const uint8_t* indices_data = reinterpret_cast<const uint8_t*>(column.data + pos);
     for (size_t i = 0; i < rows_count; ++i) {
-        int16_t index_signed = 0;
-        memcpy(&index_signed, column.data + pos, sizeof(index_signed));
-        pos += sizeof(index_signed);
-        size_t index = static_cast<size_t>(index_signed);
-        size_t start = index == 0 ? 0 : static_cast<size_t>(offsets[index - 1]);
-        size_t end = static_cast<size_t>(offsets[index]);
-        result->Emplace_Back(dictionary.data() + start, end - start);
+        int16_t index_signed;
+        std::memcpy(&index_signed, indices_data + i * sizeof(int16_t), sizeof(int16_t));
+        result->Push_Back(dict_strings[static_cast<size_t>(index_signed)]);
     }
+
     return result;
 }
 

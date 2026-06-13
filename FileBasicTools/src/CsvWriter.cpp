@@ -1,10 +1,14 @@
-#include "CSVWriter.h"
+#include "CsvWriter.h"
 #include "Column.h"
 #include <array>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
 #include <charconv>
 #include <filesystem>
 #include <limits>
 #include <stdexcept>
+
+// тут я когда подключал все запросы кодекса натравил добавить все типы колонок
+// так 
 
 namespace {
 
@@ -182,9 +186,6 @@ void CSVWriter::WriteDouble(double data) {
     std::array<char, 64> buffer{};
     auto [ptr, err] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), data, std::chars_format::general,
                                     std::numeric_limits<double>::max_digits10);
-    if (err != std::errc()) {
-        throw std::runtime_error("Failed to format double!");
-    }
     WriteRaw(std::string_view(buffer.data(), static_cast<size_t>(ptr - buffer.data())));
 }
 
@@ -297,15 +298,10 @@ void CSVWriter::WriteBatch(const Batch& batch) {
     if (batch.Empty()) {
         return;
     }
-
-    const size_t columns = batch.Size();
-    const size_t rows = batch.GetRows();
-    const auto& mask = batch.GetMsk();
-    if (!mask.empty() && mask.size() != rows) {
-        throw std::runtime_error("CSVWriter batch mask size mismatch!");
-    }
-    const bool use_mask = !mask.empty() && mask.count() != mask.size();
-
+    size_t columns = batch.Size();
+    size_t rows = batch.GetRows();
+    const boost::dynamic_bitset<>& mask = batch.GetMsk();
+    bool use_mask = !mask.empty() && mask.count() != mask.size();
     std::vector<std::shared_ptr<Column>> storages;
     std::vector<ColumnType> types;
     storages.reserve(columns);
@@ -313,14 +309,9 @@ void CSVWriter::WriteBatch(const Batch& batch) {
     for (size_t column = 0; column < columns; ++column) {
         auto storage = batch.GetColumn(column);
         CheckColumnSize(storage, rows);
-        const ColumnType type = batch.GetType(column);
-        if (type != storage->GetType()) {
-            throw std::runtime_error("CSVWriter column type mismatch!");
-        }
         storages.push_back(std::move(storage));
-        types.push_back(type);
+        types.push_back(batch.GetType(column));
     }
-
     for (size_t row = 0; row < rows; ++row) {
         if (use_mask && !mask[row]) {
             continue;
