@@ -101,6 +101,7 @@ inline void Apply(std::shared_ptr<Column> col, EncodedColumn& result) {
 } // namespace Raw
 
 namespace BitPack {
+
 template <typename T> uint8_t RequiredBits(T value) {
     int64_t signed_value = static_cast<int64_t>(value);
     if (signed_value == std::numeric_limits<int64_t>::min()) {
@@ -122,6 +123,7 @@ template <typename T> uint64_t EncodeSigned(T value, uint8_t bits_per_value) {
     }
     return static_cast<uint64_t>(signed_value) & mask;
 }
+
 inline void WriteBits(std::vector<uint8_t>& out, size_t& bit_offset, uint64_t value, uint8_t bits) {
     for (uint8_t bit = 0; bit < bits; ++bit) {
         const size_t target_bit = bit_offset + bit;
@@ -131,6 +133,7 @@ inline void WriteBits(std::vector<uint8_t>& out, size_t& bit_offset, uint64_t va
     }
     bit_offset += bits;
 }
+
 template <typename ColumnT> size_t CountSize(std::shared_ptr<ColumnT> col) {
     if (!col || col->Size() == 0) {
         return sizeof(size_t) + sizeof(uint8_t);
@@ -143,10 +146,8 @@ template <typename ColumnT> size_t CountSize(std::shared_ptr<ColumnT> col) {
     size_t payload_bits = static_cast<size_t>(bits_per_value) * col->Size();
     return sizeof(size_t) + sizeof(uint8_t) + (payload_bits + 7) / 8;
 }
+
 inline size_t CountSize(std::shared_ptr<Column> col) {
-    if (!col) {
-        throw std::runtime_error("Null column in BitPack::CountSize!");
-    }
     switch (col->GetType()) {
     case ColumnType::Int8:
         return CountSize(As<Int8Column>(col));
@@ -164,6 +165,7 @@ inline size_t CountSize(std::shared_ptr<Column> col) {
         throw std::runtime_error("String or unknown type column in BitPack::CountSize!");
     }
 }
+
 template <typename ColumnT> void Apply(std::shared_ptr<ColumnT> col, EncodedColumn& result) {
     size_t rows_count = col ? col->Size() : 0;
     if (!col || col->Size() == 0) {
@@ -189,6 +191,7 @@ template <typename ColumnT> void Apply(std::shared_ptr<ColumnT> col, EncodedColu
     }
     result = {CodecType::BitPack, std::move(bytes)};
 }
+
 inline void Apply(std::shared_ptr<Column> col, EncodedColumn& result) {
     if (!col) {
         throw std::runtime_error("Null column in Raw::Apply!");
@@ -217,10 +220,13 @@ inline void Apply(std::shared_ptr<Column> col, EncodedColumn& result) {
     }
     throw std::runtime_error("Unknown column type in Raw::Apply!");
 }
+
 } // namespace BitPack
 
 namespace Dictionary {
+
 void Apply(std::shared_ptr<FlatStringColumn> col, EncodedColumn& result);
+
 } // namespace Dictionary
 
 EncodedColumn GetBestCompression(std::shared_ptr<Column> col);

@@ -1,24 +1,15 @@
 #pragma once
 #include "../../FileBasicTools/DataStructures/Batch.h"
 #include "../../FileBasicTools/DataStructures/Utility.h"
-#include "../Operators/ScalarOperators.h"
 #include "Column.h"
-#include "Filter.h"
 #include "Functions/Expression.h"
-#include "Scheme.h"
 #include <algorithm>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
-#include <cstdint>
-#include <functional>
 #include <memory>
 #include <numeric>
 #include <queue>
 #include <stdexcept>
-#include <string>
-#include <type_traits>
-#include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
 struct TopKBatch {

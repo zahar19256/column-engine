@@ -29,6 +29,10 @@ const std::vector<size_t>& MetaData::GetRows() const {
     return rows_;
 }
 
+const std::vector<size_t>& MetaData::GetCodec() const {
+    return codec_;
+}
+
 size_t MetaData::GetBatchOffset(size_t index) const {
     if (index >= batch_offsets_.size()) {
         throw std::runtime_error("Batch offset index is out of range!");
@@ -51,6 +55,13 @@ size_t MetaData::GetRow(size_t index) const {
         throw std::runtime_error("Metadata row index is out of range!");
     }
     return rows_[index];
+}
+
+size_t MetaData::GetCodec(size_t index) const {
+    if (index >= codec_.size()) {
+        throw std::runtime_error("Metadata codec index is out of range!");
+    }
+    return codec_[index];
 }
 
 size_t MetaData::BatchesCount() const {

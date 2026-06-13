@@ -71,9 +71,6 @@ public:
 
     void UpdateBatch(const Column* input, size_t rows, const boost::dynamic_bitset<>& mask) override {
         const auto& column = dynamic_cast<const InputColumnT*>(input);
-        if (!column) {
-            throw std::runtime_error("Aggregation column type mismatch!");
-        }
         if (mask.empty() || mask.count() == mask.size()) {
             Operator::UpdateFull(state_, column);
         } else {
@@ -82,9 +79,6 @@ public:
     }
 
     void UpdateRow(const Column* input, size_t index_row) override {
-        if (input == nullptr) {
-            throw std::runtime_error("Aggregation requires input expression!");
-        }
         const auto& column = dynamic_cast<const InputColumnT*>(input);
         if (!column) {
             throw std::runtime_error("Aggregation column type mismatch!");
@@ -94,9 +88,6 @@ public:
 
     void AppendResult(Column& out) const override {
         auto* result = dynamic_cast<OutputColumnT*>(&out);
-        if (result == nullptr) {
-            throw std::runtime_error("Aggregation output column type mismatch!");
-        }
         if constexpr (std::is_same_v<OutputColumnT, StringColumn>) {
             GermanStr value = Operator::Finalize(state_);
             std::string_view view = value.View();
@@ -122,9 +113,6 @@ public:
 
     void UpdateBatch(const Column* column, size_t rows, const boost::dynamic_bitset<>& mask) override {
         if (has_expression_) {
-            if (column == nullptr) {
-                throw std::runtime_error("COUNT aggregation expression is null!");
-            }
             if (mask.empty() || mask.count() == mask.size()) {
                 CountOperator::UpdateFull(state_, column);
             } else {
@@ -140,9 +128,6 @@ public:
 
     void UpdateRow(const Column* column, size_t index_row) override {
         if (has_expression_) {
-            if (column == nullptr) {
-                throw std::runtime_error("COUNT aggregation expression is null!");
-            }
             CountOperator::UpdateRow(state_, column, index_row);
             return;
         }
@@ -153,9 +138,6 @@ public:
 
     void AppendResult(Column& out) const override {
         auto* result = dynamic_cast<Int64Column*>(&out);
-        if (result == nullptr) {
-            throw std::runtime_error("Count aggregation output column type mismatch!");
-        }
         result->Push_Back(CountOperator::Finalize(state_));
     }
 

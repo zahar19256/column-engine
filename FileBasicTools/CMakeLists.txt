@@ -51,18 +51,18 @@ target_include_directories(data_structures
 target_compile_features(data_structures PUBLIC cxx_std_20)
 
 add_library(file_tools
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVReader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVReader.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVWriter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVWriter.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvReader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvReader.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvWriter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvWriter.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZReader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZReader.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZWriter.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Coder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Coder.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVConvertor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CSVConvertor.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvConvertor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CsvConvertor.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZConvertor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/BelZConvertor.h
 )

@@ -13,7 +13,6 @@ public:
     BelZReader(const std::string& filePath);
     void ReadBatch(Batch& batch);
     void ReadBatch(Batch& batch, const std::vector<std::string>& column_names);
-    void ScanBatch(size_t index, Batch& batch);
     std::shared_ptr<Column> ReadColumn(size_t size, ColumnType type, Utility::StringArena* arena = nullptr,
                                        ssize_t need_offset = -1);
 
@@ -27,11 +26,6 @@ public:
             }
         }
         return result;
-    }
-
-    template <typename T> std::shared_ptr<Column> ReadIntergerColumn(size_t size) {
-        using ColumnT = typename Data::ColumnTraits<T>::ColumnT;
-        return ReadFixedWidthColumn<T, ColumnT>(size);
     }
 
     std::shared_ptr<Column> ReadStringColumn(size_t size);

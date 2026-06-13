@@ -1,4 +1,5 @@
 #include "Execution/Queries.h"
+#include "../FileBasicTools/src/CsvWriter.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -11,7 +12,6 @@
 #include <iomanip>
 #include <iostream>
 #include <set>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -91,64 +91,6 @@ std::filesystem::path DefaultHitsSamplePath() {
     return "FileBasicTools/src/Tests/hits_sample.belZ";
 }
 
-std::string Int128ToString(__int128_t value) {
-    if (value == 0) {
-        return "0";
-    }
-
-    bool negative = value < 0;
-    if (negative) {
-        value = -value;
-    }
-
-    std::string result;
-    while (value != 0) {
-        result.push_back(static_cast<char>('0' + value % 10));
-        value /= 10;
-    }
-    if (negative) {
-        result.push_back('-');
-    }
-    std::reverse(result.begin(), result.end());
-    return result;
-}
-
-std::string DateToString(int64_t days) {
-    days += 719468;
-    const int64_t era = (days >= 0 ? days : days - 146096) / 146097;
-    const unsigned day_of_era = static_cast<unsigned>(days - era * 146097);
-    const unsigned year_of_era = (day_of_era - day_of_era / 1460 + day_of_era / 36524 - day_of_era / 146096) / 365;
-    int year = static_cast<int>(year_of_era) + static_cast<int>(era) * 400;
-    const unsigned day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    const unsigned month_part = (5 * day_of_year + 2) / 153;
-    const unsigned day = day_of_year - (153 * month_part + 2) / 5 + 1;
-    const int month = static_cast<int>(month_part) + (month_part < 10 ? 3 : -9);
-    year += month <= 2;
-
-    std::ostringstream out;
-    out << std::setfill('0') << std::setw(4) << year << '-' << std::setw(2) << month << '-' << std::setw(2) << day;
-    return out.str();
-}
-
-std::string TimestampToString(int64_t timestamp) {
-    int64_t days = timestamp / 86400;
-    int64_t seconds = timestamp % 86400;
-    if (seconds < 0) {
-        seconds += 86400;
-        --days;
-    }
-
-    const int64_t hours = seconds / 3600;
-    seconds %= 3600;
-    const int64_t minutes = seconds / 60;
-    seconds %= 60;
-
-    std::ostringstream out;
-    out << DateToString(days) << ' ' << std::setfill('0') << std::setw(2) << hours << ':' << std::setw(2) << minutes
-        << ':' << std::setw(2) << seconds;
-    return out.str();
-}
-
 void WriteEscaped(std::ofstream& out, std::string_view value) {
     bool needs_quotes = false;
     for (const char item : value) {
@@ -173,95 +115,6 @@ void WriteEscaped(std::ofstream& out, std::string_view value) {
     }
     out << '"';
 }
-
-void WriteValue(std::ofstream& out, const std::shared_ptr<Column>& column, size_t row) {
-    switch (column->GetType()) {
-    case ColumnType::Int8:
-        out << static_cast<int64_t>(As<Int8Column>(column)->At(row));
-        return;
-    case ColumnType::Int16:
-        out << As<Int16Column>(column)->At(row);
-        return;
-    case ColumnType::Int32:
-        out << As<Int32Column>(column)->At(row);
-        return;
-    case ColumnType::Int64:
-        out << As<Int64Column>(column)->At(row);
-        return;
-    case ColumnType::Int128:
-        out << Int128ToString(As<Int128Column>(column)->At(row));
-        return;
-    case ColumnType::Double:
-        out << std::setprecision(17) << As<DoubleColumn>(column)->At(row);
-        return;
-    case ColumnType::String:
-        WriteEscaped(out, As<StringColumn>(column)->At_view(row));
-        return;
-    case ColumnType::Date:
-        out << DateToString(As<DateColumn>(column)->At(row));
-        return;
-    case ColumnType::Timestamp:
-        out << TimestampToString(As<TimeStampColumn>(column)->At(row));
-        return;
-    case ColumnType::Unknown:
-        break;
-    }
-    throw std::runtime_error("Unknown type in clickbench csv writer!");
-}
-
-class BatchCsvWriter {
-public:
-    explicit BatchCsvWriter(const std::filesystem::path& path) {
-        out_.open(path, std::ios::out);
-        if (!out_.is_open()) {
-            throw std::runtime_error("Can't open csv file: " + path.string());
-        }
-    }
-
-    void WriteBatch(const Batch& batch) {
-        if (!header_written_) {
-            WriteHeader(batch);
-            header_written_ = true;
-        }
-
-        const auto& mask = batch.GetMsk();
-        const bool use_mask = !mask.empty() && mask.count() != mask.size();
-        for (size_t row = 0; row < batch.GetRows(); ++row) {
-            if (use_mask && !mask[row]) {
-                continue;
-            }
-            for (size_t column = 0; column < batch.Size(); ++column) {
-                if (column != 0) {
-                    out_ << ',';
-                }
-                WriteValue(out_, batch.GetColumn(column), row);
-            }
-            out_ << '\n';
-            ++rows_;
-        }
-    }
-
-    size_t Rows() const {
-        return rows_;
-    }
-
-private:
-    void WriteHeader(const Batch& batch) {
-        for (size_t column = 0; column < batch.Size(); ++column) {
-            if (column != 0) {
-                out_ << ',';
-            }
-            WriteEscaped(out_, batch.GetScheme().GetName(column));
-        }
-        if (batch.Size() != 0) {
-            out_ << '\n';
-        }
-    }
-
-    std::ofstream out_;
-    bool header_written_ = false;
-    size_t rows_ = 0;
-};
 
 Batch MakeInt64Result(const std::string& name, int64_t value) {
     Scheme scheme;
@@ -329,8 +182,9 @@ struct BenchRun {
 
 BenchRun WriteBatchResult(Batch output, const std::filesystem::path& file, double query_ms) {
     const auto start = std::chrono::steady_clock::now();
-    BatchCsvWriter writer(file);
+    CSVWriter writer(file, CSVWriter::PathMode::ExactPath, true);
     writer.WriteBatch(output);
+    writer.Flush();
     const auto finish = std::chrono::steady_clock::now();
     return BenchRun{
         .rows = writer.Rows(),
@@ -348,7 +202,7 @@ template <typename Func> BenchRun RunBatchQuery(Func func, const std::filesystem
 
 BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query, const std::filesystem::path& file) {
     auto executor = ClickBench::BuildExecutor(*query);
-    BatchCsvWriter writer(file);
+    CSVWriter writer(file, CSVWriter::PathMode::ExactPath, true);
     Batch output;
     BenchRun result;
     while (true) {
@@ -365,6 +219,10 @@ BenchRun RunPlan(std::unique_ptr<LogicPlaner::QueryNode> query, const std::files
         const auto write_finish = std::chrono::steady_clock::now();
         result.write_ms += std::chrono::duration<double, std::milli>(write_finish - write_start).count();
     }
+    const auto flush_start = std::chrono::steady_clock::now();
+    writer.Flush();
+    const auto flush_finish = std::chrono::steady_clock::now();
+    result.write_ms += std::chrono::duration<double, std::milli>(flush_finish - flush_start).count();
     result.rows = writer.Rows();
     result.read_ms = executor->ReadMillis();
     return result;

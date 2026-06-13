@@ -143,21 +143,6 @@ void BelZReader::ReadBatch(Batch& batch) {
     ++index_of_batch;
 }
 
-void BelZReader::ScanBatch(size_t index, Batch& batch) {
-    if (index >= meta_.BatchesCount()) {
-        throw std::runtime_error("Batch index out of range in ScanBatch: " + std::to_string(index));
-    }
-    batch.Clear();
-    size_t current_offset = meta_.GetBatchOffset(index);
-    stream_.seekg(current_offset, std::ios::beg);
-    batch.SetScheme(scheme_);
-    size_t rows_count = meta_.GetRow(index);
-
-    for (size_t column = 0; column < scheme_.Size(); ++column) {
-        batch.AddColumn(ReadColumn(rows_count, scheme_.GetType(column), batch.GetStringArena()));
-    }
-}
-
 void BelZReader::ReadBatch(Batch& batch, const std::vector<std::string>& column_names) {
     if (batches_left_ == 0) {
         throw std::runtime_error("Try to read Batch after end of file!");

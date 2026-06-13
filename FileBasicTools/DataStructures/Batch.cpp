@@ -105,8 +105,6 @@ void Batch::ApplyMsk(const boost::dynamic_bitset<>& mask) {
     }
 }
 
-void Batch::MergeBatches(Batch& result, Batch& new_data) {}
-
 std::shared_ptr<Column> Batch::GetColumn(size_t index) const {
     if (index >= data_.size()) {
         throw std::runtime_error("Index of column is out of batch range");

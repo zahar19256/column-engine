@@ -2,7 +2,6 @@
 // тут я через llm строил запросы, чтобы они были как тесты
 
 #pragma once
-#include "../../FileBasicTools/src/CSVWriter.h"
 #include "../Helpers/AggrBuilder.h"
 #include "../Helpers/ExprHelper.h"
 #include "../Planer/Base.h"
@@ -113,7 +112,8 @@ inline void PushRequiredColumnsToScans(QueryNode& query) {
 }
 
 // attention всё что дальше это LLM составлял запросы и билдеры
-// TODO разгрести это
+// глазами так прочекал вроде адекватно
+// TODO разгрести проверить что там
 
 inline std::unique_ptr<QueryNode> MakeProjectionPlan(std::unique_ptr<QueryNode> child,
                                                      std::vector<std::string> need_columns,

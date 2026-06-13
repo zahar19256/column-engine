@@ -55,7 +55,5 @@ struct LimitNode : QueryNode {
     size_t limit_;
     size_t offset_ = 0;
 };
-struct OutputNode : QueryNode {
-    size_t query_index_ = 0;
-};
+
 } // namespace LogicPlaner

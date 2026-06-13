@@ -284,13 +284,6 @@ void CSVWriter::WriteHeader(const Batch& batch) {
     header_written_ = true;
 }
 
-void CSVWriter::WriteBatchWithHeader(const Batch& batch) {
-    if (!header_written_) {
-        WriteHeader(batch);
-    }
-    WriteBatch(batch);
-}
-
 void CSVWriter::WriteBatch(const Batch& batch) {
     if (write_header_ && !header_written_) {
         WriteHeader(batch);

@@ -20,8 +20,7 @@ std::shared_ptr<Column> ColumnAdd(std::shared_ptr<LeftColumnType> left, std::sha
 }
 
 std::shared_ptr<Column>
-DropToHours(std::shared_ptr<Column> current) { // TODO пока что данная функция заменяет DATE_FORMAT и по сути является
-                                               // хардкодом для кликбенча
+DropToHours(std::shared_ptr<Column> current) {
     if (current->GetType() != ColumnType::Timestamp) {
         throw std::runtime_error("Not timestamp column type in DropToHours!");
     }
@@ -75,9 +74,6 @@ std::shared_ptr<Column> Length(std::shared_ptr<Column> current) {
 
 std::shared_ptr<Column> ApplyRegexpReplace(std::shared_ptr<Column> current, const std::string& pattern,
                                            const std::string& replacement, Utility::StringArena* arena) {
-    if (current->GetType() != ColumnType::String) {
-        throw std::runtime_error("Not string column in RegReplace scalar operator!");
-    }
     const RE2 regex(pattern);
     if (!regex.ok()) {
         throw std::runtime_error("Invalid RegReplace regex: " + regex.error());

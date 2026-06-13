@@ -7,7 +7,6 @@
 #include "../Helpers/AggrBuilder.h"
 #include <absl/container/flat_hash_map.h>
 #include <chrono>
-#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>

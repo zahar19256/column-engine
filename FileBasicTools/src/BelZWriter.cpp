@@ -46,7 +46,7 @@ BelZWriter::BelZWriter(const std::string& CSVFilePath, const std::string& output
     }
 }
 
-uint64_t BelZWriter::GetOffSet() {
+uint64_t BelZWriter::GetOffSet() const {
     return static_cast<uint64_t>(fout_.tellp()) + offset_;
 }
 

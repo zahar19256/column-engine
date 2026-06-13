@@ -7,7 +7,7 @@
 #include <vector>
 class StringBacket {
 public:
-    void SetOffsets(std::vector<size_t>& source_offset) {
+    void SetOffsets(const std::vector<size_t>& source_offset) {
         offset_.reserve(offset_.size() + source_offset.size());
         offset_.insert(offset_.end(), source_offset.begin(), source_offset.end());
     }
@@ -49,6 +49,9 @@ public:
     char* GetData() {
         return data_.data();
     }
+    const char* GetData() const {
+        return data_.data();
+    }
     bool Empty() const {
         return offset_.empty();
     }
@@ -57,7 +60,7 @@ public:
         columns_.clear();
         rows_ = 0;
     }
-    size_t LastOffset() {
+    size_t LastOffset() const {
         if (offset_.empty()) {
             return 0;
         }

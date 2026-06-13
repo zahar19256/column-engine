@@ -58,7 +58,6 @@ public:
     void WriteDouble(double data);
     void WriteInt128(__int128_t data);
     void WriteBatch(const Batch& batch);
-    void WriteBatchWithHeader(const Batch& batch);
     void WriteHeader(const Batch& batch);
     void Flush();
     size_t Rows() const;

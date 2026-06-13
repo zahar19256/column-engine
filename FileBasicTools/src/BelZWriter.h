@@ -10,7 +10,7 @@ public:
     BelZWriter(const std::string& CSVFilePath);
     BelZWriter(const std::string& CSVFilePath, const std::string& outputFilePath);
     void EnsureCapacity(size_t add_size);
-    uint64_t GetOffSet();
+    uint64_t GetOffSet() const;
     void WriteScheme(const Scheme& scheme);
     void Append(const char* data, size_t size, ColumnType type);
     template <typename T> inline void AppendNumber(const char* data, size_t size) {
@@ -46,7 +46,7 @@ public:
     }
 
 private:
-    std::ofstream fout_;
+    mutable std::ofstream fout_;
     std::string buf_;
     size_t offset_ = 0;
 };

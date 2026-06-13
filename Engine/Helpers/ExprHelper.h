@@ -1,14 +1,9 @@
 #pragma once
-#include "../../FileBasicTools/src/BelZReader.h"
-#include "../Functions/Aggregation.h"
 #include "../Functions/Expression.h"
 #include "../Functions/Filter.h"
-#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>

@@ -70,6 +70,9 @@ public:
     GermanStr* Data() {
         return data_.data();
     }
+    const GermanStr* Data() const {
+        return data_.data();
+    }
     GermanStr At(size_t index) const {
         if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range!");
@@ -82,7 +85,7 @@ public:
         }
         return data_[index].View();
     }
-    GermanStr operator[](size_t index) {
+    GermanStr operator[](size_t index) const {
         if (index >= data_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }
@@ -163,6 +166,9 @@ public:
     char* GetDataPointer() {
         return data_.data();
     }
+    const char* GetDataPointer() const {
+        return data_.data();
+    }
     const std::string& GetData() const {
         return data_;
     }
@@ -177,7 +183,7 @@ public:
         size_t end = offsets_[index];
         return std::string_view(data_.data() + start, end - start);
     }
-    std::string operator[](size_t index) {
+    std::string operator[](size_t index) const {
         if (index >= offsets_.size()) {
             throw std::runtime_error("Index is out of StringColumn range");
         }
@@ -190,6 +196,9 @@ public:
         return data_.substr(start, size);
     }
     size_t* GetOffsetPointer() {
+        return offsets_.data();
+    }
+    const size_t* GetOffsetPointer() const {
         return offsets_.data();
     }
     const char* GetStringPointer(size_t index) const {
