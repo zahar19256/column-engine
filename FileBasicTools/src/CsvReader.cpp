@@ -1,13 +1,12 @@
-#include "CSVReader.h"
+#include "CsvReader.h"
 #include "Row.h"
 #include <cstdint>
+#include <iostream>
 #include <stdexcept>
 #include <string>
-#include <iostream>
 
-CSVReader::CSVReader(const std::string& filePath , size_t bucket_size) : filePath_(filePath) , bucket_size_(bucket_size) {
-    stream_.rdbuf()->pubsetbuf(stream_buffer_.data(), static_cast<std::streamsize>(stream_buffer_.size()));
-    stream_.open(filePath_ , std::ios::binary);
+CSVReader::CSVReader(const std::string& filePath, size_t bucket_size) : filePath_(filePath), bucket_size_(bucket_size) {
+    stream_.open(filePath_, std::ios::binary);
     if (!stream_.is_open() || !stream_) {
         throw std::runtime_error("Failed to open CSV for reading: " + filePath);
     }
@@ -18,7 +17,8 @@ void CSVReader::BOMHelper() {
     if (b0 == 0xEF) {
         char bom[3];
         stream_.read(bom, 3);
-        if (!(static_cast<unsigned char>(bom[0]) == 0xEF && static_cast<unsigned char>(bom[1]) == 0xBB && static_cast<unsigned char>(bom[2]) == 0xBF)) {
+        if (!(static_cast<unsigned char>(bom[0]) == 0xEF && static_cast<unsigned char>(bom[1]) == 0xBB &&
+              static_cast<unsigned char>(bom[2]) == 0xBF)) {
             stream_.clear();
             stream_.seekg(0, std::ios::beg);
         }
@@ -47,16 +47,16 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
                 if (cur == '"') {
                     if (i + 1 < n && buf[i + 1] == '"') {
                         if (i > offset) {
-                            data.AppendString(buf + offset, i - offset , current_len);
+                            data.AppendString(buf + offset, i - offset, current_len);
                             current_len += i - offset;
                         }
-                        data.Push_Back("\"" , current_len);
+                        data.Push_Back("\"", current_len);
                         ++current_len;
                         ++i;
                         offset = i + 1;
                     } else {
                         if (i > offset) {
-                            data.AppendString(buf + offset, i - offset , current_len);
+                            data.AppendString(buf + offset, i - offset, current_len);
                             current_len += i - offset;
                         }
                         offset = i + 1;
@@ -66,7 +66,7 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
             } else {
                 if (cur == delimiter) {
                     if (i > offset) {
-                        data.AppendString(buf + offset, i - offset , current_len);
+                        data.AppendString(buf + offset, i - offset, current_len);
                         current_len += i - offset;
                     }
                     data.PushOffset(current_len);
@@ -74,7 +74,7 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
                 } else {
                     if (cur == '"') {
                         if (i > offset) {
-                            data.AppendString(buf + offset, i - offset , current_len);
+                            data.AppendString(buf + offset, i - offset, current_len);
                             current_len += i - offset;
                         }
                         offset = i + 1;
@@ -84,12 +84,12 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
             }
         }
         if (n > offset) {
-            data.AppendString(buf + offset, n - offset , current_len);
+            data.AppendString(buf + offset, n - offset, current_len);
             current_len += n - offset;
         }
         if (state == CURSOR_STATE::IN_QUOTE) {
             if (has_delim) {
-                data.Push_Back("\n" , current_len);
+                data.Push_Back("\n", current_len);
                 ++current_len;
             }
             continue;
@@ -108,7 +108,6 @@ void CSVReader::ReadRowCSV(StringBacket& data, size_t& bytes, char delimiter) {
     }
 }
 
-
 std::vector<uint8_t> CSVReader::ReadFileData() {
     std::vector<uint8_t> data;
     char byte;
@@ -124,7 +123,7 @@ std::vector<StringBacket> CSVReader::ReadFullTable(char delimiter) {
     std::vector<StringBacket> table;
     while (true) {
         size_t bytes = 0;
-        ReadRowCSV(row , bytes , delimiter);
+        ReadRowCSV(row, bytes, delimiter);
         if (bytes == 0) {
             break;
         }

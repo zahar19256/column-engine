@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <map>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "BelZConvertor.h"
 #include "CSVConvertor.h"
@@ -17,15 +17,19 @@ protected:
     std::string baseName = "test_integrity";
     std::string csvInput = baseName + ".csv";
     std::string schemePath = baseName + "_scheme.csv";
-    std::string belzPath = baseName + ".belZ"; 
+    std::string belzPath = baseName + ".belZ";
     // Предполагаем, что writer делает так: name.belZ -> stem(name) + "upd.csv"
-    std::string csvOutput = baseName + "upd.csv"; 
+    std::string csvOutput = baseName + "upd.csv";
 
     void TearDown() override {
-        if (fs::exists(csvInput)) fs::remove(csvInput);
-        if (fs::exists(schemePath)) fs::remove(schemePath);
-        if (fs::exists(belzPath)) fs::remove(belzPath);
-        if (fs::exists(csvOutput)) fs::remove(csvOutput);
+        if (fs::exists(csvInput))
+            fs::remove(csvInput);
+        if (fs::exists(schemePath))
+            fs::remove(schemePath);
+        if (fs::exists(belzPath))
+            fs::remove(belzPath);
+        if (fs::exists(csvOutput))
+            fs::remove(csvOutput);
     }
 
     void CreateScheme(const std::string& content) {
@@ -38,12 +42,13 @@ protected:
     std::map<char, size_t> GetContentCharCounts(const std::string& path) {
         std::map<char, size_t> counts;
         CSVReader reader(path);
-        
+
         // Читаем батчами, чтобы не забивать память, если файл огромный
         while (true) {
             std::vector<StringBacket> chunk;
             reader.ReadChunk(chunk);
-            if (chunk.empty()) break;
+            if (chunk.empty())
+                break;
 
             for (const auto& row : chunk) {
                 // Проходим по всем колонкам строки
@@ -95,10 +100,9 @@ TEST_F(BelZIntegrityTest, LargeFile_CharHistogram) {
 
     // Сравниваем карты
     ASSERT_EQ(mapInput.size(), mapOutput.size()) << "Number of unique characters differs";
-    
+
     for (auto const& [key, val] : mapInput) {
-        EXPECT_EQ(mapOutput[key], val) 
-            << "Count mismatch for character '" << key << "'";
+        EXPECT_EQ(mapOutput[key], val) << "Count mismatch for character '" << key << "'";
     }
 }
 
@@ -118,7 +122,7 @@ TEST_F(BelZIntegrityTest, SpecialCharacters_Hardcore) {
         // Строка 4: Перенос строки
         out << "4,\"Line1\nLine2\"\n";
         // Строка 5: Пустая строка
-        out << "5,\n"; 
+        out << "5,\n";
     }
 
     RunPipeline();
@@ -128,19 +132,18 @@ TEST_F(BelZIntegrityTest, SpecialCharacters_Hardcore) {
 
     // Сравнение карт покажет, не потерялись ли данные внутри кавычек
     for (auto const& [key, val] : mapInput) {
-        EXPECT_EQ(mapOutput[key], val) 
-            << "Mismatch for char '" << key << "' with special characters dataset";
+        EXPECT_EQ(mapOutput[key], val) << "Mismatch for char '" << key << "' with special characters dataset";
     }
 
     // Дополнительно: Точечная проверка значений через Reader, чтобы убедиться в порядке
     CSVReader readerOut(csvOutput);
     auto table = readerOut.ReadFullTable();
     ASSERT_EQ(table.size(), 5); // header не пишется обычно, или +1 если есть
-    
+
     // Проверка переноса строки (индекс 3, колонка 1)
-    // Внимание: индексы зависят от того, есть ли заголовок в выходном файле. 
+    // Внимание: индексы зависят от того, есть ли заголовок в выходном файле.
     // BelZConvertor пишет Batch без заголовка (обычно).
-    EXPECT_EQ(table[3][1], "Line1\nLine2"); 
+    EXPECT_EQ(table[3][1], "Line1\nLine2");
     EXPECT_EQ(table[2][1], "Quote \"inside\"");
 }
 
@@ -184,7 +187,7 @@ TEST_F(BelZIntegrityTest, OnlyIntegers) {
     // Сверяем цифры
     auto mapInput = GetContentCharCounts(csvInput);
     auto mapOutput = GetContentCharCounts(csvOutput);
-    
+
     EXPECT_EQ(mapInput['9'], mapOutput['9']);
     EXPECT_EQ(mapInput['-'], mapOutput['-']);
 }

@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "Row.h"
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
@@ -11,7 +11,7 @@ TEST(RowTest, Constructor_Default) {
 
 TEST(RowTest, Add_Elements) {
     Row<int> row;
-    
+
     int x = 10;
     row.Add(x);
     row.Add(20);
@@ -25,7 +25,7 @@ TEST(RowTest, Add_Elements) {
 TEST(RowTest, Access_And_Modify) {
     Row<std::string> row;
     row.Add("hello");
-    
+
     EXPECT_EQ(row[0], "hello");
 
     row[0] = "world";
@@ -36,9 +36,9 @@ TEST(RowTest, Clear) {
     Row<int> row;
     row.Add(1);
     row.Add(2);
-    
+
     row.Clear();
-    
+
     EXPECT_TRUE(row.Empty());
     EXPECT_EQ(row.Size(), 0);
 }
@@ -52,7 +52,7 @@ TEST(RowTest, GetData_ReturnsCopy) {
 
     ASSERT_EQ(data.size(), 2);
     EXPECT_EQ(data[0], 100);
-    
+
     EXPECT_EQ(row.Size(), 2);
     EXPECT_FALSE(row.Empty());
 }
@@ -91,14 +91,13 @@ TEST(RowTest, MoveConstructor) {
     EXPECT_EQ(moved_to.Size(), 1);
     EXPECT_EQ(moved_to[0], "data");
 
-    EXPECT_EQ(original.Size(), 0); 
+    EXPECT_EQ(original.Size(), 0);
 }
-
 
 TEST(RowTest, ComplexTypes) {
     Row<std::string> row;
     std::string s = "test";
-    
+
     row.Add(s);
     row.Add(std::move(s));
     row.Add("literal");
@@ -109,7 +108,7 @@ TEST(RowTest, ComplexTypes) {
     EXPECT_EQ(row[2], "literal");
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

@@ -1,10 +1,11 @@
-#include <gtest/gtest.h>
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <string>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
+#include "BelZReader.h"
 #include "CSVConvertor.h"
 namespace fs = std::filesystem;
 
@@ -15,9 +16,12 @@ protected:
     std::string belzPath = "data.belZ";
 
     void TearDown() override {
-        if (fs::exists(csvPath)) fs::remove(csvPath);
-        if (fs::exists(schemePath)) fs::remove(schemePath);
-        if (fs::exists(belzPath)) fs::remove(belzPath);
+        if (fs::exists(csvPath))
+            fs::remove(csvPath);
+        if (fs::exists(schemePath))
+            fs::remove(schemePath);
+        if (fs::exists(belzPath))
+            fs::remove(belzPath);
     }
 
     // Хелпер для создания CSV
@@ -43,9 +47,9 @@ protected:
     // Хелпер для чтения бинарного файла
     std::vector<uint8_t> ReadBytes() {
         std::ifstream input(belzPath, std::ios::binary);
-        if (!input.is_open()) return {};
-        return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)),
-                                     std::istreambuf_iterator<char>());
+        if (!input.is_open())
+            return {};
+        return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     }
 };
 
@@ -56,7 +60,7 @@ TEST_F(CSVConvertorTest, EndToEnd_TranspositionCheck) {
 
     // 2. Запуск конвертации
     CSVConvertor convertor;
-    
+
     // Этот метод должен:
     // 1. Прочитать схему.
     // 2. Прочитать CSV.
@@ -66,55 +70,22 @@ TEST_F(CSVConvertorTest, EndToEnd_TranspositionCheck) {
     // 3. Проверка существования файла
     ASSERT_TRUE(fs::exists(belzPath)) << "Output .belZ file was not created";
 
-    // 4. Проверка содержимого (Самая важная часть)
-    auto data = ReadBytes();
-    
-    // Мы ожидаем, что CSVConvertor считал чанк (обе строки) и записал их транспонированно.
-    // Порядок в файле (до метаданных) должен быть таким:
-    // [Колонка 1 (id)]: 10, 20
-    // [Колонка 2 (name)]: "Alice", "Bob"
-    
-    const uint8_t* ptr = data.data();
+    BelZReader reader(belzPath);
+    Batch batch;
+    reader.ReadBatch(batch);
 
-    // --- Проверяем Колонку 1 (Int64) ---
-    // Сначала должно идти число 10
-    int64_t val1 = 0;
-    std::memcpy(&val1, ptr, sizeof(int64_t));
-    ptr += sizeof(int64_t);
-    EXPECT_EQ(val1, 10);
-    // Сразу за ним должно идти число 20 (а НЕ строка "Alice", если транспонирование работает)
-    int64_t val2 = 0;
-    std::memcpy(&val2, ptr, sizeof(int64_t));
-    ptr += sizeof(int64_t);
-    EXPECT_EQ(val2, 20);
-    // --- Проверяем Колонку 2 (String) ---
-    // Строковая колонка пишется блочно: [data_size][offsets_count][data][offsets].
-    size_t data_size = 0;
-    std::memcpy(&data_size, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(data_size, 8); // AliceBob
+    ASSERT_EQ(batch.Size(), 2);
+    auto ids = As<Int64Column>(batch.GetColumn(0));
+    auto names = As<StringColumn>(batch.GetColumn(1));
+    ASSERT_NE(ids, nullptr);
+    ASSERT_NE(names, nullptr);
+    ASSERT_EQ(ids->Size(), 2);
+    ASSERT_EQ(names->Size(), 2);
 
-    size_t offsets_count = 0;
-    std::memcpy(&offsets_count, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offsets_count, 2);
-
-    std::string data_blob(reinterpret_cast<const char*>(ptr), data_size);
-    ptr += data_size;
-    EXPECT_EQ(data_blob, "AliceBob");
-
-    size_t offset1 = 0;
-    std::memcpy(&offset1, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offset1, 5);
-
-    size_t offset2 = 0;
-    std::memcpy(&offset2, ptr, sizeof(size_t));
-    ptr += sizeof(size_t);
-    EXPECT_EQ(offset2, 8);
-    
-    // После данных должны идти Метаданные (Footer), но их мы детально проверяли в BelZWriter.
-    // Главное, что мы подтвердили транспонирование: сначала все ID, потом все Имена.
+    EXPECT_EQ((*ids)[0], 10);
+    EXPECT_EQ((*ids)[1], 20);
+    EXPECT_EQ(names->At_view(0), "Alice");
+    EXPECT_EQ(names->At_view(1), "Bob");
 }
 
 // Тест на случай, если файла схемы нет
@@ -138,7 +109,7 @@ TEST_F(CSVConvertorTest, EmptyCSV) {
 
     ASSERT_TRUE(fs::exists(belzPath));
     auto data = ReadBytes();
-    
+
     // Файл должен содержать только метаданные (Footer), так как данных нет.
     // Размер должен быть > 0 (так как метаданные занимают место).
     EXPECT_GT(data.size(), 0);
@@ -153,11 +124,11 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
     // Нам нужно пробить барьер в 4096 байт.
     // Пусть одна строка будет ~50 байт. 1000 строк = 50 КБ.
     size_t total_rows_expected = 100000;
-    
+
     {
         std::ofstream out(csvPath);
         std::string padding(40, 'x'); // Длинная строка "xxxxxxxx..."
-        
+
         for (size_t i = 0; i < total_rows_expected; ++i) {
             // Формат: id,name
             // Пример: 0,row_0_xxxxxxxxxxxxxxxxxxxx...
@@ -173,7 +144,7 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
     // 4. Валидация через разбор Метаданных (Footer)
     // Мы не будем парсить весь файл (это долго писать), но проверим "подвал",
     // чтобы убедиться, что записалось нужное количество строк и батчей.
-    
+
     auto data = ReadBytes();
     size_t fileSize = data.size();
     ASSERT_GT(fileSize, sizeof(uint64_t)); // Файл не пустой
@@ -182,7 +153,7 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
     // А. Читаем Offset начала метаданных (последние 8 байт)
     uint64_t metaStart = 0;
     std::memcpy(&metaStart, ptr + fileSize - sizeof(uint64_t), sizeof(uint64_t));
-    
+
     // Переходим к началу метаданных
     ASSERT_LT(metaStart, fileSize);
     const uint8_t* metaPtr = ptr + metaStart;
@@ -198,7 +169,7 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
         size_t nameLen = 0;
         std::memcpy(&nameLen, metaPtr, sizeof(size_t));
         metaPtr += sizeof(size_t);
-        metaPtr += nameLen; // пропускаем имя
+        metaPtr += nameLen;         // пропускаем имя
         metaPtr += sizeof(uint8_t); // пропускаем тип
     }
 
@@ -208,8 +179,7 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
     metaPtr += sizeof(size_t);
 
     // ПРОВЕРКА 1: Батчей должно быть больше 1, так как файл большой
-    EXPECT_GT(batchesCount, 1) 
-        << "For a 50KB file, we expect multiple batches (chunks), but got only " << batchesCount;
+    EXPECT_GT(batchesCount, 1) << "For a 50KB file, we expect multiple batches (chunks), but got only " << batchesCount;
 
     // Д. Пропускаем массив Offsets (batchesCount * size_t)
     metaPtr += batchesCount * sizeof(size_t);
@@ -220,11 +190,11 @@ TEST_F(CSVConvertorTest, LargeFile_MultipleBatches) {
         size_t rowsInBatch = 0;
         std::memcpy(&rowsInBatch, metaPtr, sizeof(size_t));
         metaPtr += sizeof(size_t);
-        
+
         total_rows_actual += rowsInBatch;
     }
 
     // ПРОВЕРКА 2: Сумма строк во всех батчах должна совпадать с тем, что мы записали
-    EXPECT_EQ(total_rows_actual, total_rows_expected) 
+    EXPECT_EQ(total_rows_actual, total_rows_expected)
         << "Data loss detected! Written rows vs BelZ metadata rows mismatch.";
 }

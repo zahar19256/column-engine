@@ -1,0 +1,234 @@
+#pragma once
+#include <algorithm>
+#include <cstring>
+#include <stdint.h>
+#include <string>
+#include <string_view>
+
+struct GermanStrHash;
+
+class GermanStr {
+public:
+    GermanStr() {
+        low_ = 0, high_ = 0;
+    }
+    GermanStr(const char* start, size_t size) {
+        if (size <= 12) {
+            high_ = static_cast<uint32_t>(size);
+            low_ = 0;
+            memcpy(reinterpret_cast<char*>(this) + 4, start, size);
+        } else {
+            uint32_t prefix = 0;
+            memcpy(&prefix, start, 4);
+            high_ = static_cast<uint32_t>(size) | (static_cast<uint64_t>(prefix) << 32);
+            low_ = reinterpret_cast<uint64_t>(start);
+        }
+    }
+    GermanStr(std::string_view str) {
+        const char* start = str.data();
+        size_t size = str.size();
+        if (size <= 12) {
+            high_ = static_cast<uint32_t>(size);
+            low_ = 0;
+            memcpy(reinterpret_cast<char*>(this) + 4, start, size);
+        } else {
+            uint32_t prefix = 0;
+            memcpy(&prefix, start, 4);
+            high_ = static_cast<uint32_t>(size) | (static_cast<uint64_t>(prefix) << 32);
+            low_ = reinterpret_cast<uint64_t>(start);
+        }
+    }
+
+    GermanStr(GermanStr&& other) : high_(std::move(other.high_)), low_(std::move(other.low_)) {}
+    GermanStr(const GermanStr& other) = default;
+
+    GermanStr& operator=(const GermanStr& other) = default;
+
+    inline int Compare(std::string_view other) const noexcept {
+        size_t size = Size();
+        size_t other_size = other.size();
+        size_t mn_size = std::min(size, other_size);
+        if (mn_size >= 4) {
+            uint32_t prefix = GetPref();
+            uint32_t other_prefix;
+            std::memcpy(&other_prefix, other.data(), 4);
+            if (prefix != other_prefix) {
+                return __builtin_bswap32(prefix) < __builtin_bswap32(other_prefix) ? -1 : 1;
+            }
+            if (mn_size > 4) {
+                int compare_result = std::memcmp(Data() + 4, other.data() + 4, mn_size - 4);
+                if (compare_result != 0) {
+                    return compare_result;
+                }
+            }
+        } else if (mn_size > 0) {
+            int compare_result = std::memcmp(Data(), other.data(), mn_size);
+            if (compare_result != 0) {
+                return compare_result;
+            }
+        }
+        if (size < other_size) {
+            return -1;
+        }
+        if (size > other_size) {
+            return 1;
+        }
+        return 0;
+    }
+
+    inline bool operator<(std::string_view other) const noexcept {
+        return Compare(other) < 0;
+    }
+    inline bool operator>(std::string_view other) const noexcept {
+        return Compare(other) > 0;
+    }
+    inline bool operator<=(std::string_view other) const noexcept {
+        return Compare(other) <= 0;
+    }
+    inline bool operator>=(std::string_view other) const noexcept {
+        return Compare(other) >= 0;
+    }
+
+    inline bool operator==(const GermanStr& other) const noexcept {
+        if (high_ != other.high_) {
+            return false;
+        }
+        size_t sz = Size();
+        if (sz <= 12) {
+            return low_ == other.low_;
+        }
+        if (GetPref() != other.GetPref()) {
+            return false;
+        }
+        return memcmp(Data(), other.Data(), sz) == 0;
+    }
+
+    inline bool operator!=(const GermanStr& other) const noexcept {
+        return !(*this == other);
+    }
+    inline bool operator<(const GermanStr& other) const noexcept {
+        return Compare(other.View()) < 0;
+    }
+    inline bool operator>(const GermanStr& other) const noexcept {
+        return Compare(other.View()) > 0;
+    }
+    inline bool operator<=(const GermanStr& other) const noexcept {
+        return Compare(other.View()) <= 0;
+    }
+    inline bool operator>=(const GermanStr& other) const noexcept {
+        return Compare(other.View()) >= 0;
+    }
+
+    inline bool operator==(std::string_view other) const noexcept {
+        size_t sz = Size();
+        if (sz != other.size()) {
+            return false;
+        }
+        if (sz >= 4) {
+            uint32_t prefix = GetPref();
+            uint32_t other_prefix;
+            std::memcpy(&other_prefix, other.data(), 4);
+            if (prefix != other_prefix) {
+                return false;
+            }
+            return std::memcmp(Data() + 4, other.data() + 4, sz - 4) == 0;
+        }
+        return std::memcmp(Data(), other.data(), sz) == 0;
+    }
+
+    inline bool operator!=(std::string_view other) const noexcept {
+        return !(*this == other);
+    }
+
+    size_t Size() const noexcept;
+    const char* Data() const noexcept;
+    uint32_t GetPref() const noexcept;
+
+    std::string_view View() const {
+        size_t sz = Size();
+        if (sz <= 12) {
+            return std::string_view(reinterpret_cast<const char*>(this) + 4, sz);
+        } else {
+            return std::string_view(reinterpret_cast<const char*>(low_), sz);
+        }
+    }
+
+private:
+    friend struct GermanStrHash;
+    uint64_t high_;
+    uint64_t low_;
+};
+
+inline bool operator<(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) > 0;
+}
+inline bool operator>(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) < 0;
+}
+inline bool operator<=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) >= 0;
+}
+inline bool operator>=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs.Compare(lhs) <= 0;
+}
+inline bool operator==(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return rhs == lhs;
+}
+inline bool operator!=(std::string_view lhs, const GermanStr& rhs) noexcept {
+    return !(rhs == lhs);
+}
+
+struct GermanStrEq {
+    bool operator()(const GermanStr& lhs, const GermanStr& rhs) const noexcept {
+        return lhs == rhs;
+    }
+};
+
+// LLM hash:
+struct GermanStrHash {
+    static inline uint64_t Mix(uint64_t value) noexcept {
+        value ^= value >> 30;
+        value *= 0xbf58476d1ce4e5b9ULL;
+        value ^= value >> 27;
+        value *= 0x94d049bb133111ebULL;
+        value ^= value >> 31;
+        return value;
+    }
+
+    static inline uint64_t Read64(const char* data) noexcept {
+        uint64_t value;
+        std::memcpy(&value, data, sizeof(value));
+        return value;
+    }
+
+    static inline uint64_t ReadTail(const char* data, size_t size) noexcept {
+        uint64_t value = 0;
+        std::memcpy(&value, data, size);
+        return value;
+    }
+
+    size_t operator()(const GermanStr& value) const noexcept {
+        constexpr uint64_t first_seed = 0x9e3779b97f4a7c15ULL;
+        constexpr uint64_t second_seed = 0xc2b2ae3d27d4eb4fULL;
+        constexpr uint64_t third_seed = 0x165667b19e3779f9ULL;
+
+        const size_t size = value.high_ & ((1ULL << 32) - 1);
+        if (size <= 12) {
+            return static_cast<size_t>(Mix(value.high_ ^ first_seed) ^ Mix(value.low_ + second_seed));
+        }
+
+        const char* data = reinterpret_cast<const char*>(value.low_);
+        uint64_t hash = Mix(value.high_ ^ (static_cast<uint64_t>(size) * first_seed));
+        size_t offset = 4;
+        while (offset + 8 <= size) {
+            hash ^= Mix(Read64(data + offset) + second_seed + offset);
+            hash = (hash << 27) | (hash >> 37);
+            hash = hash * first_seed + third_seed;
+            offset += 8;
+        }
+        if (offset < size) {
+            hash ^= Mix(ReadTail(data + offset, size - offset) + second_seed + offset);
+        }
+        return static_cast<size_t>(Mix(hash));
+    }
+};

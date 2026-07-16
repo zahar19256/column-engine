@@ -2,27 +2,29 @@
 #include "Column.h"
 #include "Row.h"
 #include "Scheme.h"
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>
 #include <memory>
 #include <stdexcept>
 #include <string>
 
+void Batch::EnsureStringArena() {
+    if (string_arena_ == nullptr) {
+        string_arena_ = std::make_unique<Utility::StringArena>();
+    }
+}
+
 void Batch::ChunkToBatch(const StringBacket& chunk) {
+    EnsureStringArena();
     if (chunk.Empty()) {
         return;
     }
     for (size_t column = 0; column < scheme_.Size(); ++column) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(column) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
-        }
-        if (scheme_.GetType(column) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(column), string_arena_.get());
         if (scheme_.GetType(column) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(column) + " type!");
         }
         for (size_t row = 0; row < chunk.GetRows(); ++row) {
-            storage->AppendFromString(chunk.GetString(row , column) , chunk.GetSize(row , column));
+            storage->AppendFromString(chunk.GetString(row, column), chunk.GetSize(row, column));
         }
         AddColumn(storage);
         rows_ = chunk.GetRows();
@@ -30,15 +32,10 @@ void Batch::ChunkToBatch(const StringBacket& chunk) {
 }
 
 void Batch::Init() {
+    EnsureStringArena();
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(i) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
-        }
-        if (scheme_.GetType(i) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(scheme_.GetType(i), string_arena_.get());
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -46,17 +43,16 @@ void Batch::Init() {
     }
 }
 
-void Batch::Init(const Scheme& scheme) {
+void Batch::Init(const Scheme& scheme, bool convert) {
+    EnsureStringArena();
     scheme_ = scheme;
     rows_ = 0;
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        std::shared_ptr<Column> storage;
-        if (scheme_.GetType(i) == ColumnType::Int64) {
-            storage = std::make_shared<Int64Column>();
+        ColumnType type = scheme_.GetType(i);
+        if (convert && type == ColumnType::String) {
+            type = ColumnType::FlatString;
         }
-        if (scheme_.GetType(i) == ColumnType::String) {
-            storage = std::make_shared<StringColumn>();
-        }
+        std::shared_ptr<Column> storage = MakeColumn(type, string_arena_.get());
         if (scheme_.GetType(i) == ColumnType::Unknown) {
             throw std::runtime_error("Unknown column " + std::to_string(i) + " type!");
         }
@@ -71,7 +67,7 @@ void Batch::AddColumn(std::shared_ptr<Column> column) {
 
 void Batch::AddRowFromCSV(const StringBacket& val) {
     for (size_t i = 0; i < scheme_.Size(); ++i) {
-        data_[i]->AppendFromString(val.GetString(0 , i), val.GetSize(0 , i));
+        data_[i]->AppendFromString(val.GetString(0, i), val.GetSize(0, i));
     }
     ++rows_;
 }
@@ -80,11 +76,65 @@ void Batch::SetScheme(const Scheme& scheme) {
     scheme_ = scheme;
 }
 
+void Batch::SetRows(size_t rows) {
+    rows_ = rows;
+}
+
+void Batch::InitMsk() {
+    mask_.resize(GetRows(), true);
+}
+
+void Batch::SetMsk(const boost::dynamic_bitset<>& mask) {
+    mask_ = mask;
+}
+
+void Batch::SetMsk(boost::dynamic_bitset<>&& msk) {
+    mask_ = std::move(msk);
+}
+
+void Batch::AddAlias(const std::string& current_name, const std::string& alias) {
+    scheme_.AddAlias(current_name, alias);
+}
+
+void Batch::ApplyMsk(const boost::dynamic_bitset<>& mask) {
+    if (!has_mask_) {
+        mask_ = mask;
+        has_mask_ = true;
+    } else {
+        mask_ &= mask;
+    }
+}
+
 std::shared_ptr<Column> Batch::GetColumn(size_t index) const {
     if (index >= data_.size()) {
         throw std::runtime_error("Index of column is out of batch range");
     }
     return data_[index];
+}
+
+std::shared_ptr<Column> Batch::GetColumn(const std::string& column_name) const {
+    size_t index = scheme_.GetIndex(column_name);
+    if (index >= Size()) {
+        throw std::runtime_error("Column id is bigger than batch size!");
+    }
+    return GetColumn(index);
+}
+
+const boost::dynamic_bitset<>& Batch::GetMsk() const {
+    return mask_;
+}
+
+Utility::StringArena* Batch::GetStringArena() {
+    EnsureStringArena();
+    return string_arena_.get();
+}
+
+const Utility::StringArena* Batch::GetStringArena() const {
+    return string_arena_.get();
+}
+
+const Scheme& Batch::GetScheme() const {
+    return scheme_;
 }
 
 size_t Batch::Size() const {
@@ -96,15 +146,21 @@ bool Batch::Empty() const {
 }
 
 void Batch::Clear() {
+    EnsureStringArena();
     data_.clear();
+    string_arena_->Clear();
     scheme_.Clear();
+    mask_.clear();
+    has_mask_ = false;
     rows_ = 0;
 }
 
 void Batch::Reset() {
+    EnsureStringArena();
     for (size_t i = 0; i < scheme_.Size(); ++i) {
         data_[i]->Clear();
     }
+    string_arena_->Clear();
     rows_ = 0;
 }
 

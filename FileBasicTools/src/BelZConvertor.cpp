@@ -1,6 +1,6 @@
 #include "BelZConvertor.h"
 #include "BelZReader.h"
-#include "CSVWriter.h"
+#include "CsvWriter.h"
 
 bool BelZConvertor::GetBatch(BelZReader& scan_) {
     if (scan_.Empty()) {

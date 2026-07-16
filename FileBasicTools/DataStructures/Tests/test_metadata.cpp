@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "MetaData.h"
+#include <gtest/gtest.h>
 #include <vector>
 
 TEST(MetaDataTest, EmptyOnStart) {
@@ -31,13 +31,13 @@ TEST(MetaDataTest, BatchOffsetsAddAndRetrieve) {
 
 TEST(MetaDataTest, Rows_AddAndRetrieve) {
     MetaData md;
-    
+
     md.AddRows(100);
     md.AddRows(55);
-    
+
     EXPECT_EQ(md.GetRow(0), 100);
     EXPECT_EQ(md.GetRow(1), 55);
-    
+
     const std::vector<size_t>& vec = md.GetRows();
     ASSERT_EQ(vec.size(), 2);
     EXPECT_EQ(vec[0], 100);
@@ -57,7 +57,7 @@ TEST(MetaDataTest, Scheme_SetAndGet) {
     EXPECT_EQ(stored_scheme.GetName(0), "col1");
     EXPECT_EQ(stored_scheme.GetName(1), "col2");
 
-    EXPECT_EQ(s.Size(), 0); 
+    EXPECT_EQ(s.Size(), 0);
 }
 
 TEST(MetaDataTest, ColumnOffsetsFlatLayout_AddAndRetrieve) {
@@ -125,5 +125,5 @@ TEST(MetaDataTest, Clear) {
     EXPECT_TRUE(md.GetColumnOffsets().empty());
     EXPECT_TRUE(md.GetRows().empty());
 
-    EXPECT_EQ(md.GetScheme().Size(), 0); 
+    EXPECT_EQ(md.GetScheme().Size(), 0);
 }
